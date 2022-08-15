@@ -30,7 +30,6 @@ class Fenrir:
         self.endnow = True
 
     def run(self):
-        # TODO: Delete to old entries in scan database
         info('Fenrir starting...')
         info('Creating directories...')
         makedirs(self.__dbpath__, exist_ok=True)

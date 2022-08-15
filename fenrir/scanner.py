@@ -82,10 +82,11 @@ class Scanner:
     def continousupdate(self, singleshot=False):
         while not self.endnow:
             mydefaultgws = getmydefaultgws(self.interface)
-            startmillis = round(time() * 1000)
             devicenet = self.getmydeviceroutes()
-            devices = self.scan(networks=devicenet)
-            self.updatedatabase(devices=devices, excludeIPs=mydefaultgws)
+            startmillis = round(time() * 1000)
+            if devicenet and mydefaultgws:
+                devices = self.scan(networks=devicenet)
+                self.updatedatabase(devices=devices, excludeIPs=mydefaultgws)
             exectime = round(time() * 1000) - startmillis
             sleeptime = 30 * 1000 - exectime
             while sleeptime > 0:

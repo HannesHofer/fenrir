@@ -16,14 +16,21 @@ from signal import signal, SIGINT, SIGTERM
 
 
 class Scanner:
-    def __init__(self, dbpath='/var/cache/fenrir/', interface='eth0') -> None:
+    def __init__(self, dbpath='/var/cache/fenrir/', interface='eth0', clear=False) -> None:
         self.endnow = False
         self.settingsdb = dbpath + 'settings.sqlite'
         self.netdevices = dbpath + 'netdevices.sqlite'
         self.interface = interface
+        if clear:
+            self.clearresults()
 
     def doend(self, signum, frame):
         self.endnow = True
+
+    def clearresults(self):
+        db = connect(self.netdevices)
+        if db:
+            return db.cursor().execute('DELETE FROM devices;')
 
     def getmydeviceroutes(self):
         targetnetworks = set()
@@ -107,7 +114,7 @@ class Scanner:
 
 
 def scan(interface, singleshot):
-    Scanner(interface=interface).run(singleshot=singleshot)
+    Scanner(interface=interface, clear=True).run(singleshot=singleshot)
 
 
 def main():

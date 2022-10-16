@@ -9,17 +9,38 @@ from signal import signal, SIGINT, SIGTERM
 
 
 class VPN:
+    """ class to handle VPN config/connection
+    
+    Handles VPN Configuration
+    handle connection and setup from config file(s)
+    """
     def __init__(self, interface=None, authfile=None, configfile=None, encrypted=False) -> None:
+        """ initialization
+        
+        :param interface: if given use as VPN interface
+        :param authfile: file for VPN authentication (user/password)
+        :param configfile: configfile for VPN connection
+        :param encryped: set to True if authfile is encrypted 
+        """
         self.interface = interface
         self.authfile = authfile
         self.configfile = configfile
         self.encrypted = encrypted
         self.endnow = False
 
-    def doend(self, signum, frame):
+    def doend(self, signum, frame) -> None:
+        """ stop running program once signal is received
+        
+        signum and frame are needed in order to map method as signal handler
+        """
         self.endnow = True
 
-    def connect(self,):
+    def connect(self) -> None:
+        """ start vpn connection
+        
+        start openvpn with preset config 
+        end process/connection when doend is set
+        """
         startcmd = ['/usr/sbin/openvpn', '--auth-nocache']
         if self.configfile:
             startcmd += ['--config', self.configfile]
@@ -34,7 +55,13 @@ class VPN:
 
         proc.kill()
 
-    def run(self):
+    def run(self) -> None:
+        """ main running method until stop signal is recevied and doend member is set
+        
+        decrypt set config and authfile if needed
+        stop on signal term and int
+        re-try to establish connection with 2 second backoff time        
+        """
         if self.encrypted:
             fh = filehandler()
             self.configfile = fh.decryptfile(self.configfile)
@@ -54,12 +81,24 @@ class VPN:
             unlink(self.authfile)
 
 
-def vpn(interface, authfile, configfile, encrypted):
+def vpn(interface, authfile, configfile, encrypted) -> None:
+    """ set up connection with given parameters
+    
+    :param interface: interface for vpn traffic routing
+    :param authfile: path to authentication file
+    :param configfile: path to vpn config file
+    :param encrypted: is config and authfile encrypted
+    """
     VPN(interface=interface, authfile=authfile,
         configfile=configfile, encrypted=encrypted).run()
 
 
-def main():
+def main() -> None:
+    """ main method
+    
+    parse given commandline arguments
+    start vpn handling
+    """
     parser = ArgumentParser()
     parser.add_argument(
         '--interface', help='interface for VPN traffic', default=None)

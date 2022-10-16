@@ -14,7 +14,22 @@ from argparse import ArgumentParser
 
 
 class Fenrir:
-    def __init__(self, inputinterface, vpninterface, vpnconfigfile='', vpnauthfile='', vpnisencrypted=False):
+    """ class to contain all ARP related methods
+    
+    Handles all ARP related stuff.
+    Spoofing, Scanning etc. Also available from config.
+    """
+    def __init__(self, inputinterface, vpninterface, vpnconfigfile='', vpnauthfile='', vpnisencrypted=False) -> None:
+        """ initialization
+        
+        :param inputinterface: interface for network traffic to be spoofed
+        :param vpninterface: vpn interface to route spoofed traffic to
+        :param vpnconfigfile: config file for vpn connection
+        :param vpnauthfile: authentication file for vpn connection (username/password)
+        :param vpnisencrypted: is vpnauthfile encrypted; more obfuscated since no actual password input is required
+        
+        map sigterm and sigend to doend method allowing those signals to stop run method
+        """
         self.inputinterface = inputinterface
         self.vpninterface = vpninterface
         self.vpnconfigfile = vpnconfigfile
@@ -26,10 +41,20 @@ class Fenrir:
         signal(SIGINT, self.doend)
         signal(SIGTERM, self.doend)
 
-    def doend(self, signum, frame):
+    def doend(self, signum, frame) -> None:
+        """ stop running program once signal is received
+        
+        signum and frame are needed in order to map method as signal handler
+        """
         self.endnow = True
 
-    def run(self):
+    def run(self) -> None:
+        """ main running method until stop signal is recevied and doend member is set
+        
+        start and watch firewall, arphandler, scanner processes 
+        stop processes on doend
+        """
+        # TODO: Delete to old entries in scan database
         info('Fenrir starting...')
         info('Creating directories...')
         makedirs(self.__dbpath__, exist_ok=True)
@@ -81,7 +106,13 @@ class Fenrir:
         info('All managed processes ended. quiting.')
 
 
-def main():
+def main() -> None:
+    """ main method
+    
+    initialize logging 
+    parse given commandline arguments
+    start Fenrir main method
+    """
     parser = ArgumentParser()
     parser.add_argument(
         '--vpninterface', help='interface for VPN traffic', default='tun0')

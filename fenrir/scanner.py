@@ -8,7 +8,7 @@ from fenrir.arper import getmydefaultgws
 from socket import AF_INET
 from datetime import datetime
 from time import time, sleep
-from sqlite3 import connect, OperationalError
+from sqlite3 import connect, OperationalError, Cursor
 from logging import info, debug, basicConfig, INFO
 from sys import stdout
 from argparse import ArgumentParser
@@ -16,7 +16,18 @@ from signal import signal, SIGINT, SIGTERM
 
 
 class Scanner:
-    def __init__(self, dbpath='/var/cache/fenrir/', interface='eth0', clear=False) -> None:
+    """ class to handle MACAddress/IP scanning 
+    
+    Handles scanning for mac and ip addresses
+    creates database and stores found mac/ip addresses
+    get default route to determine and exclude default gateways
+    """
+    def __init__(self, dbpath='/var/cache/fenrir/', interface='eth0') -> None:
+        """ initialization
+        
+        :param dbpath: path to store/create database of scanned MAC/IPs
+        :param interface: interface to scan for MAC/IPs
+        """
         self.endnow = False
         self.settingsdb = dbpath + 'settings.sqlite'
         self.netdevices = dbpath + 'netdevices.sqlite'
@@ -24,15 +35,24 @@ class Scanner:
         if clear:
             self.clearresults()
 
-    def doend(self, signum, frame):
+    def doend(self, signum, frame) -> None:
+        """ stop running program once signal is received
+        
+        signum and frame are needed in order to map method as signal handler
+        """
         self.endnow = True
 
-    def clearresults(self):
+    def clearresults(self) -> Cursor:
+        """ reset netdevices """
         db = connect(self.netdevices)
         if db:
             return db.cursor().execute('DELETE FROM devices;')
 
-    def getmydeviceroutes(self):
+    def getmydeviceroutes(self) -> list:
+        """ get device routes for given interface
+        
+        return all device routes on given interface
+        """
         targetnetworks = set()
         for route in IPRoute().get_addr(family=AF_INET):
             tmpnetworks = set()
@@ -48,7 +68,13 @@ class Scanner:
                         break
         return list(targetnetworks)
 
-    def scan(self, networks):
+    def scan(self, networks) -> map:
+        """ scan for MAC/IPs in given networks
+        
+        :param networks: networks to scan to
+        
+        check if IP is in settings set to active if present
+        """
         clients = {}
         for net in networks:
             mypacket = Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=net)
@@ -70,7 +96,14 @@ class Scanner:
             debug(f'unable to open Database at {self.settingsdb}')
         return clients
 
-    def updatedatabase(self, devices=None, excludeIPs=[]):
+    def updatedatabase(self, devices=None, excludeIPs=[]) -> None:
+        """ update database with given devices
+        
+        :param devices: given map of active ips
+        :param excludeIPs: IPs to be ignored
+        
+        update netdevices database with given devices but ignore excludeips
+        """
         db = connect(self.netdevices)
         cur = db.cursor()
         cur.execute('''CREATE TABLE IF NOT EXISTS devices(mac TEXT PRIMARY KEY, ip TEXT,  vendor TEXT,
@@ -79,14 +112,22 @@ class Scanner:
         for ip, additionalinfo in devices.items():
             if ip in excludeIPs:
                 continue
-            active = additionalinfo['active'] if 'active' in additionalinfo.keys(
-            ) else 0
+            active = additionalinfo['active'] if 'active' in additionalinfo.keys() else 0
             cur.execute('INSERT OR REPLACE INTO devices(mac, ip, vendor, active, lastupdate) values(?, ?, ?, ?, ?)',
                         (additionalinfo['mac'], ip, getvendorformac(additionalinfo['mac']), active, now))
         db.commit()
         db.close()
 
-    def continousupdate(self, singleshot=False):
+    def continousupdate(self, singleshot=False) -> None:
+        """ update database with hosts on preset interface
+        
+        :param singleshot: if set quit after 1 scan otherwise scan continously
+        
+        get default GWs to ignore gateway from scanning
+        get device routes for scanning
+        do scan & update database
+        on continous update sleep 30 secs
+        """
         while not self.endnow:
             mydefaultgws = getmydefaultgws(self.interface)
             devicenet = self.getmydeviceroutes()
@@ -104,7 +145,13 @@ class Scanner:
             if singleshot:
                 break
 
-    def run(self, singleshot=False):
+    def run(self, singleshot=False) -> None:
+        """ run scanning
+        
+        :param singleshot: abort scan after 1 scan if set to True
+        initialize logging and map singals to doend method
+        start scanning with given parameters        
+        """
         basicConfig(stream=stdout, level=INFO)
         signal(SIGINT, self.doend)
         signal(SIGTERM, self.doend)
@@ -113,11 +160,21 @@ class Scanner:
         info('device scanning stoped.')
 
 
-def scan(interface, singleshot):
-    Scanner(interface=interface, clear=True).run(singleshot=singleshot)
+def scan(interface, singleshot) -> None:
+    """ do scan on given interface
+    
+    :param interface: scan on given interface
+    :param sigleshot: quit after 1 scan if set to True
+    """
+    Scanner(interface=interface).run(singleshot=singleshot)
 
 
-def main():
+def main() -> None:
+    """ main method
+    
+    parse given commandline arguments
+    start Firewall
+    """
     parser = ArgumentParser()
     parser.add_argument(
         '--singleshot', help='exit after first completed scan', action='store_true')

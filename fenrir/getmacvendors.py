@@ -10,7 +10,11 @@ URL = 'http://standards-oui.ieee.org/oui/oui.txt'
 DBPATH = '/var/cache/fenrir/'
 
 
-def updatemacvendors(dbpath=f'{DBPATH}macvendors.sqlite'):
+def updatemacvendors(dbpath=f'{DBPATH}macvendors.sqlite') -> None:
+    """ update/create given database with current MAC vendor list
+    
+    :param dbpath: path to mac database to be updated/created
+    """
     db = connect(dbpath)
     cur = db.cursor()
     cur.execute(
@@ -28,7 +32,13 @@ def updatemacvendors(dbpath=f'{DBPATH}macvendors.sqlite'):
     db.close()
 
 
-def getvendorformac(mac, dbpath=f'{DBPATH}macvendors.sqlite', retrycount=0):
+def getvendorformac(mac, dbpath=f'{DBPATH}macvendors.sqlite', retrycount=0) -> str:
+    """ get vendor name for given mac address
+    
+    :param mac: mac address for vendor lookup
+    :param dbpath: path for lookup database (default set)
+    :param retrycount: counter for automatic vendor download
+    """
     try:
         with connect(f'file:{dbpath}?mode=ro', timeout=10, check_same_thread=False, uri=True) as db:
             cursor = db.cursor()
@@ -41,6 +51,7 @@ def getvendorformac(mac, dbpath=f'{DBPATH}macvendors.sqlite', retrycount=0):
         updatemacvendors()
         if retrycount < 1:
             getvendorformac(mac=mac, dbpath=dbpath, retrycount=1)
+        return ''
         
 
 

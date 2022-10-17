@@ -1,7 +1,7 @@
 #!/bin/env python3
 
 from scapy.all import Ether, ARP, send, srp
-from pyroute2 import IPRoute, IPDB
+from pyroute2 import IPRoute, NDB
 from time import time, sleep
 from sqlite3 import connect, OperationalError
 from sys import argv, stdout
@@ -30,12 +30,12 @@ def getmydefaultgws(allowedinterface=None) -> dict:
     :returns dict of Gateways and MAC Addresses
     """
     ip = IPRoute()
-    interfacedata = IPDB().interfaces
+    interfacedata = NDB().interfaces
     defaultgws = dict()
     for route in ip.get_default_routes():
         routedata = zip(route.get_attrs('RTA_GATEWAY'), route.get_attrs('RTA_OIF'))
         for gw, ifidx in list(routedata):
-            ifname = interfacedata[ifidx].ifname if ifidx in interfacedata.keys() else 'unknown'
+            ifname = interfacedata[ifidx]['ifname'] if interfacedata[ifidx] else 'unknown'
             debug(f'found gatewayIP {gw} on interface {ifname}')
             if allowedinterface and ifname != allowedinterface:
                 debug(f'not adding {gw} since {ifname} != {allowedinterface}')
@@ -220,12 +220,12 @@ class Arper:
         signal(SIGTERM, self.doend)
         # check if interface is present und up
         info(f'checking if interface {self.interface} is present...')
-        ip = IPDB()
+        ip = NDB()
         while not self.endnow and self.interface not in ip.interfaces:
             debug(f'interface {self.interface} not present waiting...')
             sleep(2)
         info(f'found interface {self.interface} on system. checking status...')
-        while not self.endnow and ip.interfaces[self.interface].operstate.lower() != 'up':
+        while not self.endnow and ip.interfaces[self.interface]['operstate'].lower() != 'up':
             debug(f'interface {self.interface} not ready waiting...')
             sleep(2)
         info(f'interface {self.interface} ready. starting arp...')

@@ -9,7 +9,7 @@ from socket import AF_INET
 from datetime import datetime
 from time import time, sleep
 from sqlite3 import connect, OperationalError, Cursor
-from logging import info, debug, basicConfig, INFO
+from logging import info, debug, basicConfig, INFO, DEBUG
 from sys import stdout
 from argparse import ArgumentParser
 from signal import signal, SIGINT, SIGTERM
@@ -82,6 +82,7 @@ class Scanner:
                          timeout=10, verbose=0)[0]
             for sent, received in result:
                 clients[received.psrc] = {'mac': received.hwsrc}
+                debug(f'found {received.psrc} with MAC {received.hwsrc}')
 
         try:
             with connect(f'file:{self.settingsdb}?mode=ro', timeout=10, check_same_thread=False, uri=True) as db:
@@ -135,24 +136,28 @@ class Scanner:
             if devicenet and mydefaultgws:
                 devices = self.scan(networks=devicenet)
                 self.updatedatabase(devices=devices, excludeIPs=mydefaultgws)
+            if singleshot:
+                break
             exectime = round(time() * 1000) - startmillis
-            sleeptime = 30 * 1000 - exectime
+            sleeptime = 30 - (exectime/1000)
+            debug(f'sleeptime: {sleeptime} exectime: {exectime}')
             while sleeptime > 0:
                 sleeptime = sleeptime - 1
                 if self.endnow:
                     break
                 sleep(1)
-            if singleshot:
-                break
 
-    def run(self, singleshot=False) -> None:
+
+    def run(self, singleshot=False, debuglog=False) -> None:
         """ run scanning
         
         :param singleshot: abort scan after 1 scan if set to True
+        :param debug: set logging to debug if true
+
         initialize logging and map singals to doend method
         start scanning with given parameters        
         """
-        basicConfig(stream=stdout, level=INFO)
+        basicConfig(stream=stdout, level=DEBUG if debuglog else INFO)
         signal(SIGINT, self.doend)
         signal(SIGTERM, self.doend)
         info('statring device scanning...')
@@ -160,13 +165,14 @@ class Scanner:
         info('device scanning stoped.')
 
 
-def scan(interface, singleshot) -> None:
+def scan(interface, singleshot, debug=False) -> None:
     """ do scan on given interface
     
     :param interface: scan on given interface
     :param sigleshot: quit after 1 scan if set to True
+    :param debug: set logging to debug if true
     """
-    Scanner(interface=interface).run(singleshot=singleshot)
+    Scanner(interface=interface).run(singleshot=singleshot, debuglog=debug)
 
 
 def main() -> None:
@@ -180,8 +186,9 @@ def main() -> None:
         '--singleshot', help='exit after first completed scan', action='store_true')
     parser.add_argument(
         '--interface', help='interface for device scanning', default='eth0')
+    parser.add_argument('--debug', help='activate debug logging', action='store_true')
     args = parser.parse_args()
-    scan(interface=args.interface, singleshot=args.singleshot)
+    scan(interface=args.interface, singleshot=args.singleshot, debug=args.debug)
 
 
 if __name__ == "__main__":

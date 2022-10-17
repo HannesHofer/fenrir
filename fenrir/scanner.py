@@ -22,7 +22,7 @@ class Scanner:
     creates database and stores found mac/ip addresses
     get default route to determine and exclude default gateways
     """
-    def __init__(self, dbpath='/var/cache/fenrir/', interface='eth0') -> None:
+    def __init__(self, dbpath='/var/cache/fenrir/', interface='eth0', clear=False) -> None:
         """ initialization
         
         :param dbpath: path to store/create database of scanned MAC/IPs

@@ -1,12 +1,10 @@
-import unittest
-import sys
-
+from unittest import TestCase, main as unittestmain
 from unittest.mock import patch, mock_open, call
 from random import choice
 from string import ascii_letters
 from fenrir import filehandler
 
-class FilehandlerTestCase(unittest.TestCase):
+class FilehandlerTestCase(TestCase):
     def setUp(self):
         self.passphrase = ''.join(choice(ascii_letters) for i in range(15))
         self.sourcefilepath = '/tmp/sourcefile'
@@ -41,4 +39,4 @@ class FilehandlerTestCase(unittest.TestCase):
             
 
 if __name__ == '__main__':
-    unittest.main()
+    unittestmain()

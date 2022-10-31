@@ -2,7 +2,7 @@
 
 from fenrir.firewall import Firewall
 from fenrir.arper import arper
-from fenrir.scanner import scan
+from fenrir.scanner import scan, printresults
 from fenrir.vpn import vpn
 from signal import signal, SIGINT, SIGTERM
 from time import sleep
@@ -125,9 +125,12 @@ def main() -> None:
     parser.add_argument('--vpnconfigisencrypted',
                         help='specify if VPN config and authfile are encrypted', action='store_true', default=True)
     parser.add_argument('--debug', help='activate debug logging', action='store_true')
+    parser.add_argument('--scanonly', help='do network scan and print results', action='store_true')
     args = parser.parse_args()
     loglevel = DEBUG if args.debug else INFO
     basicConfig(stream=stdout, level=loglevel)
+    if args.scanonly:
+        return printresults(args.inputinterface)
     Fenrir(inputinterface=args.inputinterface, vpninterface=args.vpninterface,
            vpnauthfile=args.vpnauthfile, vpnconfigfile=args.vpnconfigfile,
            vpnisencrypted=args.vpnconfigisencrypted).run()

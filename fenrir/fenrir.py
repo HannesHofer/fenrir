@@ -19,7 +19,7 @@ class Fenrir:
     Handles all ARP related stuff.
     Spoofing, Scanning etc. Also available from config.
     """
-    def __init__(self, inputinterface, vpninterface, vpnconfigfile='', vpnauthfile='', vpnisencrypted=False) -> None:
+    def __init__(self, inputinterface, vpninterface, vpnconfigfile='', vpnauthfile='', vpnisencrypted=False, password=None) -> None:
         """ initialization
         
         :param inputinterface: interface for network traffic to be spoofed
@@ -27,6 +27,7 @@ class Fenrir:
         :param vpnconfigfile: config file for vpn connection
         :param vpnauthfile: authentication file for vpn connection (username/password)
         :param vpnisencrypted: is vpnauthfile encrypted; more obfuscated since no actual password input is required
+        :param password: use given password for vpnconfig encryption/decryption
         
         map sigterm and sigend to doend method allowing those signals to stop run method
         """
@@ -36,6 +37,7 @@ class Fenrir:
         self.vpnauthfile = vpnauthfile
         self.vpnisencrypted = vpnisencrypted
         self.endnow = False
+        self.password = password
         self.processes = []
         self.__dbpath__ = '/var/cache/fenrir/'
         signal(SIGINT, self.doend)
@@ -70,7 +72,7 @@ class Fenrir:
         self.processes[-1].start()
         info('Scanner startup complete. Starting VPN...')
         self.processes.append(Process(target=vpn, args=(
-            self.vpninterface, self.vpnauthfile, self.vpnconfigfile, self.vpnisencrypted)))
+            self.vpninterface, self.vpnauthfile, self.vpnconfigfile, self.vpnisencrypted, self.password)))
         self.processes[-1].start()
         info(
             f'VPN startup complete. watching Process {" ".join(str(p.pid) for p in self.processes)}')
@@ -125,6 +127,8 @@ def main() -> None:
                         help='specify if VPN config and authfile are encrypted', action='store_true', default=True)
     parser.add_argument('--debug', help='activate debug logging', action='store_true')
     parser.add_argument('--scanonly', help='do network scan and print results', action='store_true')
+    parser.add_argument(
+        '--password', help='use given password for vpnconfig encryption/decryption', default=None)
     args = parser.parse_args()
     loglevel = DEBUG if args.debug else INFO
     basicConfig(stream=stdout, level=loglevel)
@@ -132,7 +136,7 @@ def main() -> None:
         return printresults(args.inputinterface)
     Fenrir(inputinterface=args.inputinterface, vpninterface=args.vpninterface,
            vpnauthfile=args.vpnauthfile, vpnconfigfile=args.vpnconfigfile,
-           vpnisencrypted=args.vpnconfigisencrypted).run()
+           vpnisencrypted=args.vpnconfigisencrypted, password=args.password).run()
 
 
 if __name__ == "__main__":

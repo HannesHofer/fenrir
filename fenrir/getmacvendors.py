@@ -1,6 +1,5 @@
 #!/bin/env python3
 
-from psutil import disk_partitions
 from requests import get
 from sqlite3 import connect
 from re import compile

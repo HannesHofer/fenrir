@@ -83,7 +83,15 @@ class Scanner:
             for sent, received in result:
                 clients[received.psrc] = {'mac': received.hwsrc}
                 debug(f'found {received.psrc} with MAC {received.hwsrc}')
+        return clients
 
+    def setactive(self, clients):
+        """ set configured clients to active
+
+        :param clients: clients to set active if configured in database
+
+        set configured MACs in DB to active
+        """
         try:
             with connect(f'file:{self.settingsdb}?mode=ro', timeout=10, check_same_thread=False, uri=True) as db:
                 cursor = db.cursor()
@@ -134,7 +142,7 @@ class Scanner:
             devicenet = self.getmydeviceroutes()
             startmillis = round(time() * 1000)
             if devicenet and mydefaultgws:
-                devices = self.scan(networks=devicenet)
+                devices = self.setactive(self.scan(networks=devicenet))
                 self.updatedatabase(devices=devices, excludeIPs=mydefaultgws)
             if singleshot:
                 break

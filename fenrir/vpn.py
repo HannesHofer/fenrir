@@ -14,19 +14,21 @@ class VPN:
     Handles VPN Configuration
     handle connection and setup from config file(s)
     """
-    def __init__(self, interface=None, authfile=None, configfile=None, encrypted=False) -> None:
+    def __init__(self, interface=None, authfile=None, configfile=None, encrypted=False, password=None) -> None:
         """ initialization
         
         :param interface: if given use as VPN interface
         :param authfile: file for VPN authentication (user/password)
         :param configfile: configfile for VPN connection
-        :param encryped: set to True if authfile is encrypted 
+        :param encrypted: set to True if authfile is encrypted
+        :param password: password for encryption
         """
         self.interface = interface
         self.authfile = authfile
         self.configfile = configfile
         self.encrypted = encrypted
         self.endnow = False
+        self.password = password
 
     def doend(self, signum, frame) -> None:
         """ stop running program once signal is received
@@ -63,7 +65,7 @@ class VPN:
         re-try to establish connection with 2 second backoff time        
         """
         if self.encrypted:
-            fh = filehandler()
+            fh = filehandler(passphrase=self.password)
             self.configfile = fh.decryptfile(self.configfile)
             self.authfile = fh.decryptfile(self.authfile)
 

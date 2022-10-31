@@ -110,9 +110,12 @@ def main() -> None:
         '--configfilepath', help='path for openvpn config file', default='/storage/nordvpn.conf')
     parser.add_argument(
         '--encrypted', help='file is encrypted. decrypt and store plaintext file in /run', action='store_true')
+    parser.add_argument(
+        '--password', help='use given password for encryption/decryption', default=None)
     args = parser.parse_args()
     vpn(interface=args.interface, authfile=args.authfilepath,
-        configfile=args.configfilepath, encrypted=args.encrypted)
+        configfile=args.configfilepath, encrypted=args.encrypted,
+        password=args.password)
 
 
 if __name__ == "__main__":

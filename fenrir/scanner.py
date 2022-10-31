@@ -183,6 +183,20 @@ def scan(interface, singleshot, debug=False) -> None:
     Scanner(interface=interface).run(singleshot=singleshot, debuglog=debug)
 
 
+def printresults(interface) -> None:
+    """ do scan on given interface and print results
+
+    :param interface: scan on given interface
+    """
+    scanner = Scanner(interface=interface)
+    routes = scanner.getmydeviceroutes()
+    devices = scanner.scan(networks=routes)
+    for ip, macmap in devices.items():
+        thevendor = getvendorformac(macmap["mac"])
+        vendortext = '' if not thevendor else ' from Vendor ' + thevendor
+        print(f'found MAC {macmap["mac"]}{vendortext} with IP {ip}')
+
+
 def main() -> None:
     """ main method
     
@@ -193,9 +207,13 @@ def main() -> None:
     parser.add_argument(
         '--singleshot', help='exit after first completed scan', action='store_true')
     parser.add_argument(
+        '--print', help='print found devices int network (implies --singleshot)', action='store_true')
+    parser.add_argument(
         '--interface', help='interface for device scanning', default='eth0')
     parser.add_argument('--debug', help='activate debug logging', action='store_true')
     args = parser.parse_args()
+    if args.print:
+        return printresults(args.interface)
     scan(interface=args.interface, singleshot=args.singleshot, debug=args.debug)
 
 

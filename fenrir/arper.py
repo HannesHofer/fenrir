@@ -4,7 +4,7 @@ from scapy.all import Ether, ARP, send, srp
 from pyroute2 import IPRoute, NDB
 from time import time, sleep
 from sqlite3 import connect, OperationalError
-from sys import argv, stdout
+from sys import stdout
 from logging import basicConfig, info, debug, INFO
 from argparse import ArgumentParser
 from signal import signal, SIGINT, SIGTERM
@@ -12,7 +12,7 @@ from signal import signal, SIGINT, SIGTERM
 
 def getmac(targetip, interface) -> str:
     """ get macadress from given ipadress and interface
-    
+
     :param targetip: -- IP to get MAC Address from
     :param interface: -- interface to get MAC Address for IP
     :returns mac address
@@ -25,7 +25,7 @@ def getmac(targetip, interface) -> str:
 
 def getmydefaultgws(allowedinterface=None) -> dict:
     """ get mac address(es) for default GWs
-    
+
     :param allowedinterface: limit GW detection to give interface name
     :returns dict of Gateways and MAC Addresses
     """
@@ -46,14 +46,14 @@ def getmydefaultgws(allowedinterface=None) -> dict:
 
 class Arper:
     """ class to contain all ARP related methods
-    
+
     Handles all ARP related stuff.
     Spoofing, Scanning etc. Also available from config.
-    
+
     """
     def __init__(self, interface='eth0', dbpath='/var/cache/fenrir/') -> None:
         """ initialization
-        
+
         :param interface: interface where ARP action happens (default: eth0)
         ss:param dbpath: path where config databases are located (/var/cache/fenrir)
         """
@@ -64,14 +64,14 @@ class Arper:
 
     def doend(self, signum, frame) -> None:
         """ end ARP loop
-        
+
         sets stop flag. To-be-called via signal
         """
         self.endnow = True
 
     def spoofarpcache(self, targetip, targetmac, sourceip) -> None:
         """ send arp spoofing packet created from given parameters
-        
+
         :param targetip: IP Address of targed to be spoofed
         :param targetmac: MAC Address of target to be spoofed
         :param sourceip: assumed IP of default GW for given targetip:
@@ -82,7 +82,7 @@ class Arper:
 
     def restorearp(self, targetip, targetmac, sourceip, sourcemac) -> None:
         """ restore original ARP table on given targetip:
-        
+
         :param targetip: IP Address of targed to be spoofed
         :param targetmac: MAC Address of target to be spoofed
         :param sourceip: assumed IP of default GW for given targetip:
@@ -96,7 +96,7 @@ class Arper:
 
     def getspoofipsfromsettings(self, current):
         """ get IPs to be spoofed from config file
-        
+
         :param current: currently spoofed IP addresses
         :returns tuple of no-longer-to-be-spoofed IPs and to-be-spoofed-IPs
         """
@@ -109,17 +109,17 @@ class Arper:
                     newmacs.add(row[0])
             cooloff = current - newmacs
         except OperationalError as e:
-            debug(f'unable to open Database at {self.settingsdbpath}')
+            debug(f'unable to open Database at {self.settingsdbpath}: {e}')
 
         return cooloff, newmacs
 
-    def spoofipsfromconfig(self)  -> None:
-        """ continuously spoof IPs in config Database 
-        
+    def spoofipsfromconfig(self) -> None:
+        """ continuously spoof IPs in config Database
+     
         initially get MAC Addresses and IP Addresses of current default GWs
         continuously (until END flag is set via signal) send spoof packets to IPs configured in database
         send phaseout packets to no-longer-spoofed addresses to restore original MAC - GW.
-        do spoof every second for all configured IPs 
+        do spoof every second for all configured IPs
         """
         sendspoof = dict()
         sendcooloff = dict()
@@ -210,7 +210,7 @@ class Arper:
                     self.restorearp(dstip, ipmacs[i], gwip, gwmac)
 
     def run(self, targetip=None) -> None:
-        """ run ARP spoofing 
+        """ run ARP spoofing
 
         :param targetip: use targetio as target for ARP spoofing
         wait until interface is ready before starting spoofing
@@ -229,7 +229,7 @@ class Arper:
             debug(f'interface {self.interface} not ready waiting...')
             sleep(2)
         info(f'interface {self.interface} ready. starting arp...')
-        
+
         if not targetip:
             self.spoofipsfromconfig()
             info('arping stoped.')
@@ -240,9 +240,9 @@ class Arper:
 
 def arper(interface='eth0', targetip=None) -> None:
     """ start aprp spoofing with given parameters
-    
+
     :param interface: interface where spoofing is done
-    :param targetip: given IP to spoof  
+    :param targetip: given IP to spoof
     """
     info('statring arping...')
     Arper(interface=interface).run(targetip=targetip)
@@ -250,8 +250,8 @@ def arper(interface='eth0', targetip=None) -> None:
 
 def main() -> None:
     """ main method
-    
-    initialize logging 
+
+    initialize logging
     parse given commandline arguments
     """
     basicConfig(stream=stdout, level=INFO)

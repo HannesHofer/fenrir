@@ -15,20 +15,21 @@ from argparse import ArgumentParser
 
 class Fenrir:
     """ class to contain all ARP related methods
-    
+
     Handles all ARP related stuff.
     Spoofing, Scanning etc. Also available from config.
     """
-    def __init__(self, inputinterface, vpninterface, vpnconfigfile='', vpnauthfile='', vpnisencrypted=False, password=None) -> None:
+    def __init__(self, inputinterface, vpninterface, vpnconfigfile='',
+                 vpnauthfile='', vpnisencrypted=False, password=None) -> None:
         """ initialization
-        
+
         :param inputinterface: interface for network traffic to be spoofed
         :param vpninterface: vpn interface to route spoofed traffic to
         :param vpnconfigfile: config file for vpn connection
         :param vpnauthfile: authentication file for vpn connection (username/password)
         :param vpnisencrypted: is vpnauthfile encrypted; more obfuscated since no actual password input is required
         :param password: use given password for vpnconfig encryption/decryption
-        
+
         map sigterm and sigend to doend method allowing those signals to stop run method
         """
         self.inputinterface = inputinterface
@@ -45,15 +46,15 @@ class Fenrir:
 
     def doend(self, signum, frame) -> None:
         """ stop running program once signal is received
-        
+
         signum and frame are needed in order to map method as signal handler
         """
         self.endnow = True
 
     def run(self) -> None:
         """ main running method until stop signal is recevied and doend member is set
-        
-        start and watch firewall, arphandler, scanner processes 
+
+        start and watch firewall, arphandler, scanner processes
         stop processes on doend
         """
         info('Fenrir starting...')
@@ -109,8 +110,8 @@ class Fenrir:
 
 def main() -> None:
     """ main method
-    
-    initialize logging 
+
+    initialize logging
     parse given commandline arguments
     start Fenrir main method
     """

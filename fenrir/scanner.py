@@ -16,15 +16,15 @@ from signal import signal, SIGINT, SIGTERM
 
 
 class Scanner:
-    """ class to handle MACAddress/IP scanning 
-    
+    """ class to handle MACAddress/IP scanning
+
     Handles scanning for mac and ip addresses
     creates database and stores found mac/ip addresses
     get default route to determine and exclude default gateways
     """
     def __init__(self, dbpath='/var/cache/fenrir/', interface='eth0', clear=False) -> None:
         """ initialization
-        
+
         :param dbpath: path to store/create database of scanned MAC/IPs
         :param interface: interface to scan for MAC/IPs
         """
@@ -37,7 +37,7 @@ class Scanner:
 
     def doend(self, signum, frame) -> None:
         """ stop running program once signal is received
-        
+
         signum and frame are needed in order to map method as signal handler
         """
         self.endnow = True
@@ -50,7 +50,7 @@ class Scanner:
 
     def getmydeviceroutes(self) -> list:
         """ get device routes for given interface
-        
+
         return all device routes on given interface
         """
         targetnetworks = set()
@@ -70,9 +70,9 @@ class Scanner:
 
     def scan(self, networks) -> map:
         """ scan for MAC/IPs in given networks
-        
+
         :param networks: networks to scan to
-        
+
         check if IP is in settings set to active if present
         """
         clients = {}
@@ -102,15 +102,15 @@ class Scanner:
                     clients[row[0]].update(
                         {'active': True if int(row[1]) > 0 else False})
         except OperationalError as e:
-            debug(f'unable to open Database at {self.settingsdb}')
+            debug(f'unable to open Database at {self.settingsdb}: {e}')
         return clients
 
     def updatedatabase(self, devices=None, excludeIPs=[]) -> None:
         """ update database with given devices
-        
+
         :param devices: given map of active ips
         :param excludeIPs: IPs to be ignored
-        
+
         update netdevices database with given devices but ignore excludeips
         """
         db = connect(self.netdevices)
@@ -129,9 +129,9 @@ class Scanner:
 
     def continousupdate(self, singleshot=False) -> None:
         """ update database with hosts on preset interface
-        
+
         :param singleshot: if set quit after 1 scan otherwise scan continously
-        
+
         get default GWs to ignore gateway from scanning
         get device routes for scanning
         do scan & update database
@@ -155,15 +155,14 @@ class Scanner:
                     break
                 sleep(1)
 
-
     def run(self, singleshot=False, debuglog=False) -> None:
         """ run scanning
-        
+
         :param singleshot: abort scan after 1 scan if set to True
         :param debug: set logging to debug if true
 
         initialize logging and map singals to doend method
-        start scanning with given parameters        
+        start scanning with given parameters
         """
         basicConfig(stream=stdout, level=DEBUG if debuglog else INFO)
         signal(SIGINT, self.doend)
@@ -175,7 +174,7 @@ class Scanner:
 
 def scan(interface, singleshot, debug=False) -> None:
     """ do scan on given interface
-    
+
     :param interface: scan on given interface
     :param sigleshot: quit after 1 scan if set to True
     :param debug: set logging to debug if true
@@ -199,7 +198,7 @@ def printresults(interface) -> None:
 
 def main() -> None:
     """ main method
-    
+
     parse given commandline arguments
     start Firewall
     """

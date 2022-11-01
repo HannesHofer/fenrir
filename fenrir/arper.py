@@ -115,7 +115,7 @@ class Arper:
 
     def spoofipsfromconfig(self) -> None:
         """ continuously spoof IPs in config Database
-     
+
         initially get MAC Addresses and IP Addresses of current default GWs
         continuously (until END flag is set via signal) send spoof packets to IPs configured in database
         send phaseout packets to no-longer-spoofed addresses to restore original MAC - GW.
@@ -175,7 +175,7 @@ class Arper:
 
     def spoofips(self, ips=[], gwips=[]) -> None:
         """ spoof given ips to given gwips
-        
+
         continously spoof given ips until manualy aborted from keyboard
         execute arp every given self.looptime milliseconds independed of execution time
         :param ips: ips to send spoof packets to

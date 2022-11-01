@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 
 class Firewall:
     """ class to contain all Firewall handling
-        
+
     Handles all firewall handling.
     En/Disabling firewall/ forwarding
     Clear all firewall rules
@@ -14,9 +14,9 @@ class Firewall:
     @staticmethod
     def allowforward(input_interface, output_interface, states=None) -> None:
         """ enable forwarding from given input_interface to output_interface
-        
+
         :param input_interface: allow traffic from interface
-        :param output_interface: allow traffic to interface        
+        :param output_interface: allow traffic to interface
         """
         chain = Chain(Table(Table.FILTER), 'FORWARD')
         rule = Rule()
@@ -32,9 +32,9 @@ class Firewall:
     @staticmethod
     def masquerade(output_interface, routingmode='POSTROUTING') -> None:
         """ enable NAT / masquerading on given output_interface
-        
+
         :param output_interface: allow NAT / masquerade on interface
-        :param routingmode: mode to allow NAT (postrouting/ prerouting)     
+        :param routingmode: mode to allow NAT (postrouting/ prerouting)
         """
         chain = Chain(Table(Table.NAT), routingmode)
         rule = Rule()
@@ -45,7 +45,7 @@ class Firewall:
     @staticmethod
     def rewriteDNS(destination_dns_server) -> None:
         """ redirect all DNS requests to given server
-        
+
         :param destination_dns_server: DNSServer all DNS requests are sent to
         """
         chain = Chain(Table(Table.NAT), "PREROUTING")
@@ -61,8 +61,8 @@ class Firewall:
     @staticmethod
     def forwarding(allow) -> None:
         """ allow/disallow systemwide forwarding
-        
-        :param allow: allow systemwide forwarding if True, disallow on False 
+
+        :param allow: allow systemwide forwarding if True, disallow on False
         """
         with open('/proc/sys/net/ipv4/ip_forward', 'w') as f:
             f.write(f'{1 if allow else 0}')
@@ -77,12 +77,12 @@ class Firewall:
 
     def enable(self, input_interface, output_interface) -> None:
         """ enable firewall settings for forwarding
-        
+
         :param input_interface: interface for ingress traffic
         :param output_interface: interface to route spoofed traffic to
-        
+
         enable system-wide forwarding.
-        enable forwarding from input to output interface 
+        enable forwarding from input to output interface
         """
         self.clear()
         self.forwarding(allow=True)
@@ -95,7 +95,7 @@ class Firewall:
 
 def main() -> None:
     """ main method
-    
+
     parse given commandline arguments
     start Firewall
     """

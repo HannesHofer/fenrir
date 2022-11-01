@@ -10,13 +10,13 @@ from signal import signal, SIGINT, SIGTERM
 
 class VPN:
     """ class to handle VPN config/connection
-    
+
     Handles VPN Configuration
     handle connection and setup from config file(s)
     """
     def __init__(self, interface=None, authfile=None, configfile=None, encrypted=False, password=None) -> None:
         """ initialization
-        
+
         :param interface: if given use as VPN interface
         :param authfile: file for VPN authentication (user/password)
         :param configfile: configfile for VPN connection
@@ -32,15 +32,15 @@ class VPN:
 
     def doend(self, signum, frame) -> None:
         """ stop running program once signal is received
-        
+
         signum and frame are needed in order to map method as signal handler
         """
         self.endnow = True
 
     def connect(self) -> None:
         """ start vpn connection
-        
-        start openvpn with preset config 
+
+        start openvpn with preset config
         end process/connection when doend is set
         """
         startcmd = ['/usr/sbin/openvpn', '--auth-nocache']
@@ -59,10 +59,10 @@ class VPN:
 
     def run(self) -> None:
         """ main running method until stop signal is recevied and doend member is set
-        
+
         decrypt set config and authfile if needed
         stop on signal term and int
-        re-try to establish connection with 2 second backoff time        
+        re-try to establish connection with 2 second backoff time
         """
         if self.encrypted:
             fh = filehandler(passphrase=self.password)
@@ -85,7 +85,7 @@ class VPN:
 
 def vpn(interface, authfile, configfile, encrypted) -> None:
     """ set up connection with given parameters
-    
+
     :param interface: interface for vpn traffic routing
     :param authfile: path to authentication file
     :param configfile: path to vpn config file
@@ -97,7 +97,7 @@ def vpn(interface, authfile, configfile, encrypted) -> None:
 
 def main() -> None:
     """ main method
-    
+
     parse given commandline arguments
     start vpn handling
     """

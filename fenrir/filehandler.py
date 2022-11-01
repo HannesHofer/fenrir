@@ -1,7 +1,6 @@
 #!/bin/env python3
 
 import base64
-from email.utils import decode_rfc2231
 import hashlib
 from argparse import ArgumentParser
 from cryptography import fernet
@@ -11,13 +10,13 @@ from tempfile import mkstemp
 
 class filehandler():
     """ class to contain all filesystem related methods
-    
+
     Handles encryption and decryption for config files
     set default passphrase to hashed mac address if not given
     """
     def __init__(self, passphrase=None, interface='eth0') -> None:
         """ initialization
-        
+
         :param passphrase: passpharse for file encryption/ decryption. If not set use mac address
         :param interface: interface for MACAddress passphrase generation (default: eth0)
         """
@@ -32,25 +31,25 @@ class filehandler():
 
     def encode(self, plaintext) -> bytes:
         """ encode/ encrypt given plaintext
-        
-        :param plaintext: plaintext to be encoded with pre-set passphrase 
+
+        :param plaintext: plaintext to be encoded with pre-set passphrase
         """
         f = fernet.Fernet(self.__passphrase__)
         return f.encrypt(plaintext.encode('utf-8'))
 
     def decode(self, ciphertext) -> bytes:
         """ decode/ decrypt given ciphertext
-        
-        :param ciphertext: ciphertext to be decoded with pre-set passphrase 
+
+        :param ciphertext: ciphertext to be decoded with pre-set passphrase
         """
         f = fernet.Fernet(self.__passphrase__)
         return f.decrypt(ciphertext.encode('utf-8'))
 
     def decryptfile(self, inputfile) -> str:
         """ decrypt given file and return path do decrypted file
-        
+
         :param inputfile: path for file to be decrypted
-        
+
         creates new file with decrypted content
         """
         with open(inputfile, 'r') as f:
@@ -62,9 +61,9 @@ class filehandler():
 
     def encryptfile(self, inputfile) -> str:
         """ encrypt given file and return path do encrypted file
-        
+
         :param inputfile: path for file to be encrypted
-        
+
         creates new file with encrypted content
         """
         with open(inputfile, 'r') as f:
@@ -73,11 +72,11 @@ class filehandler():
             with fdopen(fd, 'w') as fp:
                 fp.write(self.encode(sourcetext).decode('utf-8'))
             return authpath
-        
-        
+
+
 def crypt(sourcefile, destinationfile, isencrypt, passphrase=None, interface=None) -> None:
     """ en/decrypt given sourcefile to destinationfile
-    
+
     :param sourcefile: file to be en/decrypted
     :param destinationfile: file for plain/ciphertext to be stored
     :param isencrypt: set to True for encryption, to False for decryption
@@ -87,11 +86,11 @@ def crypt(sourcefile, destinationfile, isencrypt, passphrase=None, interface=Non
     if not sourcefile or not destinationfile:
         print('source or destinationfile not specified')
         return -1
-    
+
     fenc = filehandler(passphrase, interface)
     with open(sourcefile, 'r') as f:
         sourcetext = f.read()
-    desitnationtext=''
+    desitnationtext = ''
     if isencrypt:
         desitnationtext = fenc.encode(sourcetext)
     else:
@@ -99,21 +98,22 @@ def crypt(sourcefile, destinationfile, isencrypt, passphrase=None, interface=Non
 
     with open(destinationfile, 'w') as f:
         f.write(desitnationtext.decode('utf-8'))
-        
+
 
 def encrypt(sourcefile, destinationfile, passphrase=None, interface=None) -> None:
     """ encrypt given sourcefile to destinationfile
-    
+
     :param sourcefile: file to be encrypted
     :param destinationfile: file for ciphertext to be stored
     :param passphrase: passphrase for encryption/decryption (if not given interface MAC is used)
     :param interface: interface for passphrase generation
     """
     crypt(sourcefile=sourcefile, destinationfile=destinationfile, isencrypt=True, passphrase=passphrase, interface=interface)
-    
+
+
 def decrypt(sourcefile, destinationfile, passphrase=None, interface=None) -> None:
     """ decrypt given sourcefile to destinationfile
-    
+
     :param sourcefile: file to be decrypted
     :param destinationfile: file for plaintext to be stored
     :param passphrase: passphrase for encryption/decryption (if not given interface MAC is used)
@@ -121,10 +121,11 @@ def decrypt(sourcefile, destinationfile, passphrase=None, interface=None) -> Non
     """
     crypt(sourcefile=sourcefile, destinationfile=destinationfile, isencrypt=False, passphrase=passphrase, interface=interface)
 
+
 def main() -> None:
     """ main method
-    
-    initialize logging 
+
+    initialize logging
     parse given commandline arguments
     start en/decryption process
     """
@@ -139,18 +140,21 @@ def main() -> None:
     parser.add_argument(
         '--interface', help='interface to read MAC as passphrase if not given(default: eth0)', default='eth0')
     args = parser.parse_args()
-    
+
     if not args.encrypt and not args.decrypt:
         print('neither --encrypt nor --decrypt specified...')
         return -1
     elif args.encrypt and args.decrypt:
         print('both --encrypt and --decrypt specified...')
         return -1
-    
+
     if args.encrypt:
-        encrypt(sourcefile=args.sourcefile, destinationfile=args.destinationfile, passphrase=args.passphrase, interface=args.interface)
+        encrypt(sourcefile=args.sourcefile, destinationfile=args.destinationfile,
+                passphrase=args.passphrase, interface=args.interface)
     else:
-        decrypt(sourcefile=args.sourcefile, destinationfile=args.destinationfile, passphrase=args.passphrase, interface=args.interface)
+        decrypt(sourcefile=args.sourcefile, destinationfile=args.destinationfile,
+                passphrase=args.passphrase, interface=args.interface)
+
 
 if __name__ == "__main__":
     main()

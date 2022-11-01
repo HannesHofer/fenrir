@@ -4,13 +4,14 @@ from random import choice
 from string import ascii_letters
 from fenrir import filehandler
 
+
 class FilehandlerTestCase(TestCase):
     def setUp(self):
         self.passphrase = ''.join(choice(ascii_letters) for i in range(15))
         self.sourcefilepath = '/tmp/sourcefile'
         self.destinationfilepath = '/tmp/destinationfile'
         self.plaintext = ''.join(choice(ascii_letters) for i in range(2048))
-    
+
     def encrypt(self):
         mymock = mock_open(read_data=self.plaintext)
         with patch('builtins.open', mymock):
@@ -21,9 +22,9 @@ class FilehandlerTestCase(TestCase):
             writedata = mymock().write.call_args[0][0]
             assert writedata != self.plaintext
             self.ciphertext = writedata
-    
+
     def decrypt(self):
-        assert hasattr(self, 'ciphertext') == True
+        assert hasattr(self, 'ciphertext')
         mymock = mock_open(read_data=self.ciphertext)
         with patch('builtins.open', mymock):
             filehandler.decrypt(self.sourcefilepath, self.destinationfilepath, self.passphrase, None)
@@ -32,11 +33,11 @@ class FilehandlerTestCase(TestCase):
                                     any_order=True)
             writedata = mymock().write.call_args[0][0]
             assert writedata == self.plaintext
-        
+
     def test_crypt(self):
         self.encrypt()
         self.decrypt()
-            
+
 
 if __name__ == '__main__':
     unittestmain()

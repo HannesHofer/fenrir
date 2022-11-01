@@ -1,7 +1,8 @@
 #!/bin/env python3
 
+from logging import debug
 from requests import get
-from sqlite3 import connect
+from sqlite3 import connect, OperationalError
 from re import compile
 
 
@@ -11,7 +12,7 @@ DBPATH = '/var/cache/fenrir/'
 
 def updatemacvendors(dbpath=f'{DBPATH}macvendors.sqlite') -> None:
     """ update/create given database with current MAC vendor list
-    
+
     :param dbpath: path to mac database to be updated/created
     """
     db = connect(dbpath)
@@ -19,7 +20,7 @@ def updatemacvendors(dbpath=f'{DBPATH}macvendors.sqlite') -> None:
     cur.execute(
         'CREATE TABLE IF NOT EXISTS devices(mac TEXT PRIMARY KEY, vendor TEXT);')
 
-    macmatch = compile('(\S+)\s+\(hex\)\s+(.*)$')
+    macmatch = compile(r'(\S+)\s+\(hex\)\s+(.*)$')
     with get(URL, stream=True) as r:
         for line in r.iter_lines(decode_unicode=True):
             res = macmatch.search(line)
@@ -33,7 +34,7 @@ def updatemacvendors(dbpath=f'{DBPATH}macvendors.sqlite') -> None:
 
 def getvendorformac(mac, dbpath=f'{DBPATH}macvendors.sqlite', retrycount=0) -> str:
     """ get vendor name for given mac address
-    
+
     :param mac: mac address for vendor lookup
     :param dbpath: path for lookup database (default set)
     :param retrycount: counter for automatic vendor download
@@ -46,12 +47,12 @@ def getvendorformac(mac, dbpath=f'{DBPATH}macvendors.sqlite', retrycount=0) -> s
             if result:
                 return result[0]
             return ''
-    except:
+    except OperationalError as e:
+        debug(f'unable to connect to vendor database: {e}')
         updatemacvendors()
         if retrycount < 1:
             getvendorformac(mac=mac, dbpath=dbpath, retrycount=1)
         return ''
-        
 
 
 if __name__ == "__main__":

@@ -51,12 +51,7 @@ class Fenrir:
         """
         self.endnow = True
 
-    def run(self) -> None:
-        """ main running method until stop signal is recevied and doend member is set
-
-        start and watch firewall, arphandler, scanner processes
-        stop processes on doend
-        """
+    def setUP(self) -> None:
         info('Fenrir starting...')
         info('Creating directories...')
         makedirs(self.__dbpath__, exist_ok=True)
@@ -68,28 +63,15 @@ class Fenrir:
         self.processes.append(Process(target=arper, args=(self.inputinterface, False)))
         self.processes[-1].start()
         info('ARP handler started. Starting Scanner...')
-        self.processes.append(
-            Process(target=scan, args=(self.inputinterface, False)))
+        self.processes.append(Process(target=scan, args=(self.inputinterface, False)))
         self.processes[-1].start()
         info('Scanner startup complete. Starting VPN...')
         self.processes.append(Process(target=vpn, args=(
             self.vpninterface, self.vpnauthfile, self.vpnconfigfile, self.vpnisencrypted, self.password)))
         self.processes[-1].start()
-        info(
-            f'VPN startup complete. watching Process {" ".join(str(p.pid) for p in self.processes)}')
-        try:
-            while not self.endnow:
-                for process in self.processes:
-                    if not process.is_alive():
-                        process.start()
-                counter = 0
-                # sleep 30 seconds but check for term signals every 0.2 secs
-                while not self.endnow and counter < (5 * 30):
-                    sleep(0.2)
-                    counter += 1
-        except KeyboardInterrupt:
-            info('got keyboard interrupt.')
+        info(f'VPN startup complete. watching Process {" ".join(str(p.pid) for p in self.processes)}')
 
+    def tearDOWN(self) -> None:
         for process in self.processes:
             info(f'got stop command. stopping process {process.pid}')
             kill(process.pid, SIGINT)
@@ -106,6 +88,28 @@ class Fenrir:
                 p.terminate()
                 p.join()
         info('All managed processes ended. quiting.')
+
+    def run(self) -> None:
+        """ main running method until stop signal is recevied and doend member is set
+
+        start and watch firewall, arphandler, scanner processes
+        stop processes on doend
+        """
+        self.setUP()
+        try:
+            while not self.endnow:
+                for process in self.processes:
+                    if not process.is_alive():
+                        process.start()
+                counter = 0
+                # sleep 30 seconds but check for term signals every 0.2 secs
+                while not self.endnow and counter < (5 * 30):
+                    sleep(0.2)
+                    counter += 1
+        except KeyboardInterrupt:
+            info('got keyboard interrupt.')
+
+        self.tearDOWN()
 
 
 def main() -> None:

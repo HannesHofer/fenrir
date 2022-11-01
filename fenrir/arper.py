@@ -113,6 +113,36 @@ class Arper:
 
         return cooloff, newmacs
 
+    def sendpackets(self, sendcooloff, sendspoof, gwdict):
+        """ send given cooloff and spoof packets
+
+        :param sendcooloff: stop ARP spoofing and send correct gw to given IPs
+        :param sendspoof: send ARP spoofing to given IPs
+        :param gwdict: dict of gateways to spoof/ restore
+
+        send configured packets for given parameters.
+        spoof and cooloff (restore original GW)
+        """
+        # send spoof packets of my gateways to configured-spoof-IPs
+        for ip, mac in sendspoof.items():
+            for gw in gwdict.keys():
+                debug(f'send spoof of {gw} to {ip} (MAC: {mac}')
+                self.spoofarpcache(ip, mac, gw)
+
+        # restore original MAC to phaseout IPs and remove once countdown expires
+        coolofexpired = list()
+        for ip, macdelaylist in sendcooloff.items():
+            for gwip, gwmac in gwdict.items():
+                self.restorearp(ip, macdelaylist[0], gwip, gwmac)
+                cooloffcount = int(macdelaylist[1]) - 1
+                if cooloffcount <= 0:
+                    coolofexpired.append(ip)
+                sendcooloff[ip] = [macdelaylist[0], cooloffcount]
+                debug(f'sent ARP restore to: {ip}; counter at {cooloffcount}')
+        for cooloffexpiredip in coolofexpired:
+            debug(f'remove cooloffIP: {cooloffexpiredip} ')
+            del sendcooloff[cooloffexpiredip]
+
     def spoofipsfromconfig(self) -> None:
         """ continuously spoof IPs in config Database
 
@@ -146,27 +176,7 @@ class Arper:
                         sendspoof[ip] = getmac(ip, self.interface)
                 loopcount = 0
 
-            # send spoof packets of my gateways to configured-spoof-IPs
-            for ip, mac in sendspoof.items():
-                for gw in gwdict.keys():
-                    debug(f'send spoof of {gw} to {ip} (MAC: {mac}')
-                    self.spoofarpcache(ip, mac, gw)
-
-            # restore original MAC to phaseout IPs and remove once countdown expires
-            coolofexpired = list()
-            for ip, macdelaylist in sendcooloff.items():
-                for gwip, gwmac in gwdict.items():
-                    self.restorearp(ip, macdelaylist[0], gwip, gwmac)
-                    cooloffcount = int(macdelaylist[1]) - 1
-                    if cooloffcount <= 0:
-                        coolofexpired.append(ip)
-                    sendcooloff[ip] = [macdelaylist[0], cooloffcount]
-                    debug(
-                        f'sent ARP restore to: {ip}; counter at {cooloffcount}')
-            for cooloffexpiredip in coolofexpired:
-                debug(f'remove cooloffIP: {cooloffexpiredip} ')
-                del sendcooloff[cooloffexpiredip]
-
+            self.sendpackets(sendcooloff=sendcooloff, sendspoof=sendspoof, gwdict=gwdict)
             exectime = round(time() * 1000) - startmillis
             sleeptime = self.looptime - exectime
             if sleeptime > 0:

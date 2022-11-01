@@ -52,6 +52,11 @@ class Fenrir:
         self.endnow = True
 
     def setUP(self) -> None:
+        """ set up firewall, processes for run
+
+        set up firewall config
+        start needed processes vpn, arper, scanner
+        """
         info('Fenrir starting...')
         info('Creating directories...')
         makedirs(self.__dbpath__, exist_ok=True)
@@ -72,6 +77,11 @@ class Fenrir:
         info(f'VPN startup complete. watching Process {" ".join(str(p.pid) for p in self.processes)}')
 
     def tearDOWN(self) -> None:
+        """ teardown run method - end processes
+
+        end all processes gracefully.
+        kill processes after grace period
+        """
         for process in self.processes:
             info(f'got stop command. stopping process {process.pid}')
             kill(process.pid, SIGINT)

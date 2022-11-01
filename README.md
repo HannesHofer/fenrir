@@ -1,3 +1,4 @@
+[![Test](https://github.com/HannesHofer/fenrir/actions/workflows/fenrir.yml/badge.svg)](https://github.com/HannesHofer/fenrir/actions/workflows/fenrir.yml)
 # Fenrir routing service
 
 ## Introduction

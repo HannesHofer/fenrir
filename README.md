@@ -1,5 +1,3 @@
-[![Actions Status](https://github.com/HannesHofer/fenrir/workflows/Test/badge.svg)](https://github.com/HannesHofer/fenrir/actions)
-
 # Fenrir routing service
 
 ## Introduction

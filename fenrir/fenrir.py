@@ -97,6 +97,7 @@ class Fenrir:
             for p in self.processes:
                 p.terminate()
                 p.join()
+        self.processes.clear()
         info('All managed processes ended. quiting.')
 
     def run(self) -> None:

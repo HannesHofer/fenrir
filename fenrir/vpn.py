@@ -105,9 +105,9 @@ def main() -> None:
     parser.add_argument(
         '--interface', help='interface for VPN traffic', default=None)
     parser.add_argument(
-        '--authfilepath', help='path for openvpn user-pass auth file', default='/storage/nordvpn.auth')
+        '--authfilepath', help='path for openvpn user-pass auth file', default='/storage/vpn.auth')
     parser.add_argument(
-        '--configfilepath', help='path for openvpn config file', default='/storage/nordvpn.conf')
+        '--configfilepath', help='path for openvpn config file', default='/storage/vpn.conf')
     parser.add_argument(
         '--encrypted', help='file is encrypted. decrypt and store plaintext file in /run', action='store_true')
     parser.add_argument(

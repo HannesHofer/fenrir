@@ -136,9 +136,9 @@ def main() -> None:
     parser.add_argument(
         '--inputinterface', help='interface for network scanning/intercepting', default='eth0')
     parser.add_argument(
-        '--vpnconfigfile', help='config file for vpn service (openvpn)', default='/storage/nordvpn.conf')
+        '--vpnconfigfile', help='config file for vpn service (openvpn)', default='/storage/vpn.conf')
     parser.add_argument(
-        '--vpnauthfile', help='auth file (username/password) for vpnservice', default='/storage/nordvpn.auth')
+        '--vpnauthfile', help='auth file (username/password) for vpnservice', default='/storage/vpn.auth')
     parser.add_argument('--vpnconfigisencrypted',
                         help='specify if VPN config and authfile are encrypted', action='store_true', default=True)
     parser.add_argument('--debug', help='activate debug logging', action='store_true')

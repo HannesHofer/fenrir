@@ -1,7 +1,5 @@
 from unittest import TestCase, main as unittestmain
 from unittest.mock import patch
-import sys
-sys.path.insert(0, '/home/hannes/Work/fenrir/fenrir-lib/fenrir')
 from fenrir import fenrir, __version__
 
 

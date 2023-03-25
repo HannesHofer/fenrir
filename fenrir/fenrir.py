@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 
-from fenrir.firewall import Firewall
-from fenrir.arper import arper
-from fenrir.scanner import scan, printresults
-from fenrir.vpn import vpn
+from . firewall import Firewall
+from . arper import arper
+from . scanner import scan, printresults
+from . vpn import vpn
 from signal import signal, SIGINT, SIGTERM
 from time import sleep
-from os import kill, makedirs
+from os import kill, makedirs, path
 from sys import stdout
-from logging import info, basicConfig, INFO, DEBUG
+from logging import error, info, basicConfig, INFO, DEBUG
 from multiprocessing import Process
 from argparse import ArgumentParser
+from sqlite3 import connect
 
 
 class Fenrir:
@@ -19,28 +20,22 @@ class Fenrir:
     Handles all ARP related stuff.
     Spoofing, Scanning etc. Also available from config.
     """
-    def __init__(self, inputinterface, vpninterface, vpnconfigfile='',
-                 vpnauthfile='', vpnisencrypted=False, password=None) -> None:
+    def __init__(self, inputinterface, vpninterface, dbpath='/var/cache/fenrir/fenrir.sqlite', password=None) -> None:
         """ initialization
 
         :param inputinterface: interface for network traffic to be spoofed
         :param vpninterface: vpn interface to route spoofed traffic to
-        :param vpnconfigfile: config file for vpn connection
-        :param vpnauthfile: authentication file for vpn connection (username/password)
-        :param vpnisencrypted: is vpnauthfile encrypted; more obfuscated since no actual password input is required
+        :param dbpath: path to vpnsettings database
         :param password: use given password for vpnconfig encryption/decryption
 
         map sigterm and sigend to doend method allowing those signals to stop run method
         """
         self.inputinterface = inputinterface
         self.vpninterface = vpninterface
-        self.vpnconfigfile = vpnconfigfile
-        self.vpnauthfile = vpnauthfile
-        self.vpnisencrypted = vpnisencrypted
+        self.dbpath = dbpath
         self.endnow = False
         self.password = password
         self.processes = []
-        self.__dbpath__ = '/var/cache/fenrir/'
         signal(SIGINT, self.doend)
         signal(SIGTERM, self.doend)
 
@@ -51,6 +46,20 @@ class Fenrir:
         """
         self.endnow = True
 
+    def initDB(self):
+        """ initialize Database. Create needed tables """
+        with connect(self.dbpath) as db:
+            cursor = db.cursor()
+            cursor.execute('CREATE TABLE IF NOT EXISTS settings(ip TEXT PRIMARY KEY, ACTIVE INTEGER DEFAULT 0);')
+            cursor.execute('''CREATE TABLE IF NOT EXISTS ipconnectionmap(id INTEGER PRIMARY KEY AUTOINCREMENT,
+                              name TEXT, ip TEXT);''')
+            cursor.execute('''CREATE TABLE IF NOT EXISTS vpnprofiles(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT ,
+                              description TEXT, isdefault BOOL, ondemand BOOL, isneeded BOOL default 0,
+                              config BYTES, username BYTES, password BYTES);''')
+            cursor.execute('''CREATE TABLE IF NOT EXISTS devices(mac TEXT PRIMARY KEY, ip TEXT,  vendor TEXT,
+                              ACTIVE INTEGER DEFAULT 0, lastupdate TIMESTAMP DEFAULT CURRENT_TIMESTAMP);''')
+            cursor.execute('''CREATE TABLE IF NOT EXISTS profilepassword(salt STRING NOT NULL, hash STRING NOT NULL, usedforencryption BOOL);''')
+
     def setUP(self) -> None:
         """ set up firewall, processes for run
 
@@ -59,11 +68,14 @@ class Fenrir:
         """
         info('Fenrir starting...')
         info('Creating directories...')
-        makedirs(self.__dbpath__, exist_ok=True)
+        makedirs(path.dirname(self.dbpath), exist_ok=True)
+        self.initDB()
         fw = Firewall()
         info('Enabling Firewall...')
-        fw.enable(input_interface=self.inputinterface,
-                  output_interface=self.vpninterface)
+        try:
+            fw.enable(input_interface=self.inputinterface, output_interface=self.vpninterface)
+        except Exception as e:
+            error(f'unable to set up firewall: {str(e)}. functionality limited to scan only.')
         info('Firewall enabled. Starting arp handler...')
         self.processes.append(Process(target=arper, args=(self.inputinterface, False)))
         self.processes[-1].start()
@@ -71,8 +83,7 @@ class Fenrir:
         self.processes.append(Process(target=scan, args=(self.inputinterface, False)))
         self.processes[-1].start()
         info('Scanner startup complete. Starting VPN...')
-        self.processes.append(Process(target=vpn, args=(
-            self.vpninterface, self.vpnauthfile, self.vpnconfigfile, self.vpnisencrypted, self.password)))
+        self.processes.append(Process(target=vpn, args=(self.vpninterface, self.password, self.dbpath)))
         self.processes[-1].start()
         info(f'VPN startup complete. watching Process {" ".join(str(p.pid) for p in self.processes)}')
 
@@ -131,28 +142,19 @@ def main() -> None:
     start Fenrir main method
     """
     parser = ArgumentParser()
-    parser.add_argument(
-        '--vpninterface', help='interface for VPN traffic', default='tun0')
-    parser.add_argument(
-        '--inputinterface', help='interface for network scanning/intercepting', default='eth0')
-    parser.add_argument(
-        '--vpnconfigfile', help='config file for vpn service (openvpn)', default='/storage/vpn.conf')
-    parser.add_argument(
-        '--vpnauthfile', help='auth file (username/password) for vpnservice', default='/storage/vpn.auth')
-    parser.add_argument('--vpnconfigisencrypted',
-                        help='specify if VPN config and authfile are encrypted', action='store_true', default=True)
+    parser.add_argument('--vpninterface', help='interface for VPN traffic', default='tun0')
+    parser.add_argument('--inputinterface', help='interface for network scanning/intercepting', default='eth0')
+    parser.add_argument('--dbpath', help='path to vpnconfig database', default='/var/cache/fenrir/fenrir.sqlite')
     parser.add_argument('--debug', help='activate debug logging', action='store_true')
     parser.add_argument('--scanonly', help='do network scan and print results', action='store_true')
-    parser.add_argument(
-        '--password', help='use given password for vpnconfig encryption/decryption', default=None)
+    parser.add_argument('--password', help='use given password for vpnconfig encryption/decryption', default=None)
     args = parser.parse_args()
     loglevel = DEBUG if args.debug else INFO
     basicConfig(stream=stdout, level=loglevel)
     if args.scanonly:
         return printresults(args.inputinterface)
     Fenrir(inputinterface=args.inputinterface, vpninterface=args.vpninterface,
-           vpnauthfile=args.vpnauthfile, vpnconfigfile=args.vpnconfigfile,
-           vpnisencrypted=args.vpnconfigisencrypted, password=args.password).run()
+           dbpath=args.dbpath, password=args.password).run()
 
 
 if __name__ == "__main__":

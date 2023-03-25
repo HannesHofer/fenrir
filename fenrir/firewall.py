@@ -88,7 +88,8 @@ class Firewall:
         self.forwarding(allow=True)
         self.allowforward(input_interface=input_interface,
                           output_interface=output_interface)
-        self.allowforward(input_interface=input_interface, output_interface=output_interface,
+        self.allowforward(input_interface=input_interface,
+                          output_interface=output_interface,
                           states='RELATED,ESTABLISHED')
         self.masquerade(output_interface='tun0')
 

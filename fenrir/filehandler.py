@@ -45,6 +45,29 @@ class filehandler():
         f = fernet.Fernet(self.__passphrase__)
         return f.decrypt(ciphertext.encode('utf-8'))
 
+    def checkpassword(self, ciphertext) -> bool:
+        """ check if currently set password is correct
+
+        :param ciphertext: test cipher to decrypt with given password
+        """
+        try:
+            self.decode(ciphertext.decode('utf-8'))
+        except fernet.InvalidToken:
+            return False
+        return True
+
+    def decrypttofile(self, ciphertext):
+        """ decrypt given ciphertext and return path do decrypted file
+
+        :param ciphertext: text to be decrypted
+
+        creates new file with decrypted content
+        """
+        fd, authpath = mkstemp()
+        with fdopen(fd, 'w') as fp:
+            fp.write(self.decode(ciphertext).decode('utf-8'))
+        return authpath
+
     def decryptfile(self, inputfile) -> str:
         """ decrypt given file and return path do decrypted file
 

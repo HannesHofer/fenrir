@@ -3,8 +3,8 @@
 from scapy.all import ARP, Ether, srp
 from pyroute2 import IPRoute
 from ipaddress import ip_network
-from fenrir.getmacvendors import getvendorformac
-from fenrir.arper import getmydefaultgws
+from . getmacvendors import getvendorformac
+from . arper import getmydefaultgws
 from socket import AF_INET
 from datetime import datetime
 from time import time, sleep
@@ -22,15 +22,14 @@ class Scanner:
     creates database and stores found mac/ip addresses
     get default route to determine and exclude default gateways
     """
-    def __init__(self, dbpath='/var/cache/fenrir/', interface='eth0', clear=False) -> None:
+    def __init__(self, dbpath='/var/cache/fenrir/fenrir.sqlite', interface='eth0', clear=False) -> None:
         """ initialization
 
         :param dbpath: path to store/create database of scanned MAC/IPs
         :param interface: interface to scan for MAC/IPs
         """
         self.endnow = False
-        self.settingsdb = dbpath + 'settings.sqlite'
-        self.netdevices = dbpath + 'netdevices.sqlite'
+        self.dbpath = dbpath
         self.interface = interface
         if clear:
             self.clearresults()
@@ -44,8 +43,7 @@ class Scanner:
 
     def clearresults(self) -> Cursor:
         """ reset netdevices """
-        db = connect(self.netdevices)
-        if db:
+        with connect(self.dbpath) as db:
             return db.cursor().execute('DELETE FROM devices;')
 
     def getmydeviceroutes(self) -> list:
@@ -93,7 +91,7 @@ class Scanner:
         set configured MACs in DB to active
         """
         try:
-            with connect(f'file:{self.settingsdb}?mode=ro', timeout=10, check_same_thread=False, uri=True) as db:
+            with connect(f'file:{self.dbpath}?mode=ro', timeout=10, check_same_thread=False, uri=True) as db:
                 cursor = db.cursor()
                 result = cursor.execute('SELECT ip, active from settings;')
                 for row in result.fetchall():
@@ -113,7 +111,7 @@ class Scanner:
 
         update netdevices database with given devices but ignore excludeips
         """
-        db = connect(self.netdevices)
+        db = connect(self.dbpath)
         cur = db.cursor()
         cur.execute('''CREATE TABLE IF NOT EXISTS devices(mac TEXT PRIMARY KEY, ip TEXT,  vendor TEXT,
                     ACTIVE INTEGER DEFAULT 0, lastupdate TIMESTAMP DEFAULT CURRENT_TIMESTAMP);''')

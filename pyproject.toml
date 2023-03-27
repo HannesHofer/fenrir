@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fenrir"
-version = "0.1.0"
+version = "0.2.0"
 description = "use Fenrir to route configured network devices trough configured VPN tunnel"
 authors = ["Hannes Hofer <Hannes.Hofer@gmail.com>"]
 

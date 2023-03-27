@@ -5,7 +5,7 @@ from fenrir import fenrir, __version__
 
 class FenrirTestCase(TestCase):
     def setUp(self):
-        self.fenrir = fenrir.Fenrir(inputinterface='eth0', vpninterface='tun0', password=None)
+        self.fenrir = fenrir.Fenrir(inputinterface='eth0', vpninterface='tun0', dbpath='/tmp/fenrir.db', password=None)
 
     def test_version(self):
         assert __version__ == '0.2.0'

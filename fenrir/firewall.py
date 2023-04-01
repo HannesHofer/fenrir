@@ -67,6 +67,7 @@ class Firewall:
         with open('/proc/sys/net/ipv4/ip_forward', 'w') as f:
             f.write(f'{1 if allow else 0}')
             f.close()
+        Chain(Table(Table.FILTER), 'FORWARD').set_policy('ACCEPT')
 
     @staticmethod
     def clear() -> None:
@@ -75,7 +76,8 @@ class Firewall:
         Chain(Table(Table.FILTER), 'OUTPUT').flush()
         Chain(Table(Table.FILTER), 'FORWARD').flush()
 
-    def enable(self, input_interface, output_interface) -> None:
+    @staticmethod
+    def enable(input_interface, output_interface) -> None:
         """ enable firewall settings for forwarding
 
         :param input_interface: interface for ingress traffic
@@ -84,14 +86,29 @@ class Firewall:
         enable system-wide forwarding.
         enable forwarding from input to output interface
         """
-        self.clear()
-        self.forwarding(allow=True)
-        self.allowforward(input_interface=input_interface,
-                          output_interface=output_interface)
-        self.allowforward(input_interface=input_interface,
-                          output_interface=output_interface,
-                          states='RELATED,ESTABLISHED')
-        self.masquerade(output_interface='tun0')
+        Firewall.forwarding(allow=True)
+        Firewall.allowforward(input_interface=input_interface,
+                              output_interface=output_interface)
+        Firewall.allowforward(input_interface=input_interface,
+                              output_interface=output_interface,
+                              states='RELATED,ESTABLISHED')
+        Firewall.masquerade(output_interface=output_interface)
+
+    @staticmethod
+    def disable(input_interface, output_interface) -> None:
+        """ enable firewall settings for forwarding
+
+        :param input_interface: interface for ingress traffic
+        :param output_interface: interface for routed/spoofed traffic
+
+        disable forwarding for given input/outputinterface
+        """
+        chain = Chain(Table(Table.FILTER), 'FORWARD')
+        deleterules = []
+        for rule in chain.rules:
+            if rule.in_interface == input_interface and rule.out_interface == output_interface:
+                deleterules.append(rule)
+                chain.delete_rule(rule)
 
 
 def main() -> None:

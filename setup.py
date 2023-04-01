@@ -1,8 +1,9 @@
 from setuptools import setup
+import fenrir
 
 setup(
     name='fenrir',
-    version='0.2.0',
+    version=fenrir.__version__,
     long_description=__doc__,
     description='use Fenrir to route configured network devices trough configured VPN tunnel',
     authors=['Hannes Hofer <Hannes.Hofer@gmail.com>'],

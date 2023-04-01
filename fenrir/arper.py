@@ -51,13 +51,13 @@ class Arper:
     Spoofing, Scanning etc. Also available from config.
 
     """
-    def __init__(self, interface='eth0', dbpath='/var/cache/fenrir/') -> None:
+    def __init__(self, interface='eth0', dbpath='/var/cache/fenrir/fenrir.sqlite') -> None:
         """ initialization
 
         :param interface: interface where ARP action happens (default: eth0)
         ss:param dbpath: path where config databases are located (/var/cache/fenrir)
         """
-        self.settingsdbpath = dbpath + 'settings.sqlite'
+        self.dbpath = dbpath
         self.interface = interface
         self.looptime = 200
         self.endnow = False
@@ -103,13 +103,13 @@ class Arper:
         newmacs = set()
         cooloff = set()
         try:
-            with connect(f'file:{self.settingsdbpath}?mode=ro', timeout=10, check_same_thread=False, uri=True) as db:
+            with connect(f'file:{self.dbpath}?mode=ro', timeout=10, check_same_thread=False, uri=True) as db:
                 cursor = db.cursor()
                 for row in cursor.execute('SELECT ip from settings WHERE active=1;').fetchall():
                     newmacs.add(row[0])
             cooloff = current - newmacs
         except OperationalError as e:
-            debug(f'unable to open Database at {self.settingsdbpath}: {e}')
+            debug(f'unable to open Database at {self.dbpath}: {e}')
 
         return cooloff, newmacs
 
@@ -168,12 +168,14 @@ class Arper:
                 cooloff, spoofips = self.getspoofipsfromsettings(
                     set(sendspoof.keys()))
                 for cooloffip in cooloff:
+                    debug(f'sending cooloff for {cooloffip}')
                     sendcooloff[cooloffip] = [getmac(cooloffip, self.interface), 10]
                     if cooloffip in sendspoof.keys():
                         del sendspoof[cooloffip]
                 for ip in spoofips:
                     if ip not in sendspoof.keys():
                         sendspoof[ip] = getmac(ip, self.interface)
+                        debug(f'sending spoof for {ip} for mac {sendspoof[ip]}')
                 loopcount = 0
 
             self.sendpackets(sendcooloff=sendcooloff, sendspoof=sendspoof, gwdict=gwdict)

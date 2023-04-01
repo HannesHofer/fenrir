@@ -8,7 +8,7 @@ from signal import signal, SIGINT, SIGTERM
 from time import sleep
 from os import kill, makedirs, path
 from sys import stdout
-from logging import error, info, basicConfig, INFO, DEBUG
+from logging import info, basicConfig, INFO, DEBUG
 from multiprocessing import Process
 from argparse import ArgumentParser
 from sqlite3 import connect
@@ -70,12 +70,6 @@ class Fenrir:
         info('Creating directories...')
         makedirs(path.dirname(self.dbpath), exist_ok=True)
         self.initDB()
-        fw = Firewall()
-        info('Enabling Firewall...')
-        try:
-            fw.enable(input_interface=self.inputinterface, output_interface=self.vpninterface)
-        except Exception as e:
-            error(f'unable to set up firewall: {str(e)}. functionality limited to scan only.')
         info('Firewall enabled. Starting arp handler...')
         self.processes.append(Process(target=arper, args=(self.inputinterface, False)))
         self.processes[-1].start()
@@ -83,7 +77,9 @@ class Fenrir:
         self.processes.append(Process(target=scan, args=(self.inputinterface, False)))
         self.processes[-1].start()
         info('Scanner startup complete. Starting VPN...')
-        self.processes.append(Process(target=vpn, args=(self.vpninterface, self.password, self.dbpath)))
+        Firewall.forwarding(allow=True)
+        self.processes.append(Process(target=vpn, args=(self.inputinterface, self.vpninterface,
+                                                        self.password, self.dbpath)))
         self.processes[-1].start()
         info(f'VPN startup complete. watching Process {" ".join(str(p.pid) for p in self.processes)}')
 

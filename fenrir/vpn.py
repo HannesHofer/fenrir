@@ -6,10 +6,11 @@ from subprocess import Popen
 from argparse import ArgumentParser
 from time import sleep
 from . filehandler import filehandler
+from . firewall import Firewall
 from signal import signal, SIGINT, SIGTERM
 from sqlite3 import connect, OperationalError, Row
 from sys import stdout
-from logging import debug, basicConfig, INFO, DEBUG
+from logging import error, debug, basicConfig, INFO, DEBUG
 from hashlib import md5
 from select import select
 from json import loads, dumps
@@ -21,14 +22,16 @@ class VPN:
     Handles VPN Configuration
     handle connection and setup from config file(s)
     """
-    def __init__(self, interface=None, password=None, dbpath='/var/cache/fenrir/fenrir.sqlite') -> None:
+    def __init__(self, inputinterface='eth0', vpninterface='tun0', password=None,
+                 dbpath='/var/cache/fenrir/fenrir.sqlite') -> None:
         """ initialization
 
         :param interface: if given use as VPN interface
         :param dbpath: path to vpn settings database
         :param password: password for encryption
         """
-        self.interface = interface
+        self.inputinterface = inputinterface
+        self.vpninterface = vpninterface
         self.dbpath = dbpath
         self.pipepath = str(join(dirname(self.dbpath), 'fenrirvpn.pipe'))
         self.endnow = False
@@ -70,8 +73,15 @@ class VPN:
                 self.vpnconnectionprocesses[obsolete].kill()
 
             # delete obsolete config files
-            for configfile in self.vpnauthfiles[obsolete]:
+            for _, configfile in self.vpnauthfiles[obsolete].items():
+                debug(f'removing obsolete config file: {configfile}')
                 unlink(configfile)
+
+            try:
+                interface = 'tun' + md5(obsolete.encode('utf-8')).hexdigest()[:3]
+                Firewall.disable(input_interface=self.inputinterface, output_interface=interface)
+            except Exception as e:
+                error(f'unable to set up firewall: {str(e)}. functionality limited to scan only.')
 
             del self.vpnconnectionprocesses[obsolete]
             del self.vpnauthfiles[obsolete]
@@ -140,7 +150,7 @@ class VPN:
                         writefile.write('\n' + readfile.read())
                 unlink(tmppass)
                 config = fh.decrypttofile(self.connectionprofiles[profilename]['config'].decode('utf-8'))
-                interface = 'tun0'
+                interface = self.vpninterface
                 if not self.connectionprofiles[profilename]['isdefault']:
                     interface = 'tun' + md5(profilename.encode('utf-8')).hexdigest()[:3]
                 debug(f'using {config} for config, {authfile} for auth and {interface} as interface...')
@@ -149,6 +159,10 @@ class VPN:
                 startcmd += ['--config', self.vpnauthfiles[profilename]['config']]
                 startcmd += ['--auth-user-pass', self.vpnauthfiles[profilename]['authfile']]
                 startcmd += ['--dev', interface]
+                try:
+                    Firewall.enable(input_interface=self.inputinterface, output_interface=interface)
+                except Exception as e:
+                    error(f'unable to set up firewall: {str(e)}. functionality limited to scan only.')
                 self.vpnconnectionprocesses[profilename] = Popen(startcmd)
             # restart process if needed
             elif self.vpnconnectionprocesses[profilename].poll():
@@ -194,19 +208,32 @@ class VPN:
             self.handleobsoletes()
             self.handlepipe()
 
-        for profile, configfiles in self.vpnauthfiles.items():
-            for configfile in configfiles:
+        # cleanup configfiles and firewall rules
+        for profilename, configfiles in self.vpnauthfiles.items():
+            if not self.connectionprofiles[profilename]['isdefault']:
+                interface = 'tun' + md5(profilename.encode('utf-8')).hexdigest()[:3]
+                try:
+                    Firewall.disable(input_interface=self.inputinterface, output_interface=interface)
+                except Exception as e:
+                    error(f'unable to delete {self.inputinterface} -> {self.interface}: {str(e)}.')
+            for _, configfile in configfiles.items():
+                debug(f'removing configfile: {configfile}')
                 unlink(configfile)
 
+        try:
+            Firewall.disable(input_interface=self.inputinterface, output_interface=self.vpninterface)
+        except Exception as e:
+            error(f'unable to delete {self.inputinterface} -> {self.vpninterface}: {str(e)}.')
 
-def vpn(interface=None, password=None, dbpath=None) -> None:
+
+def vpn(inputinterface=None, vpninterface=None, password=None, dbpath=None) -> None:
     """ set up connection with given parameters
 
     :param interface: interface for vpn traffic routing
     :param dbpath: path to vpn settings database
     """
-    VPN(interface=interface, password=password,
-        dbpath=dbpath).run()
+    VPN(inputinterface=inputinterface, vpninterface=vpninterface,
+        password=password, dbpath=dbpath).run()
 
 
 def main() -> None:
@@ -216,7 +243,8 @@ def main() -> None:
     start vpn handling
     """
     parser = ArgumentParser()
-    parser.add_argument('--interface', help='interface for VPN traffic', default=None)
+    parser.add_argument('--inputinterface', help='interface for traffic to be routed to VPN', default=None)
+    parser.add_argument('--vpninterface', help='interface for VPN traffic', default=None)
     parser.add_argument('--dbpath', help='path to vpn settings database', default='/var/cache/fenrir/fenrir.sqlite')
     parser.add_argument('--password', help='use given password for encryption/decryption', default=None)
     parser.add_argument('--debug', help='activate debug logging', action='store_true')
@@ -224,7 +252,8 @@ def main() -> None:
     loglevel = DEBUG if args.debug else INFO
     basicConfig(stream=stdout, level=loglevel)
     debug(f'path: {args.dbpath}')
-    vpn(dbpath=args.dbpath, interface=args.interface, password=args.password)
+    vpn(dbpath=args.dbpath, inputinterface=args.inputinterface,
+        vpninterface=args.vpninterface, password=args.password)
 
 
 if __name__ == "__main__":

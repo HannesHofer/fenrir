@@ -1,7 +1,5 @@
 from unittest import TestCase, main as unittestmain
 from unittest.mock import patch, Mock
-from random import choice
-from string import ascii_letters
 from fenrir import vpn
 
 
@@ -9,15 +7,16 @@ class VPNTest(TestCase):
     def setUp(self):
         pass
 
-    def generic(self, interface=''):
-        mymock = Mock()
-        with patch('fenrir.vpn.Popen', mymock):
-            myvpn = vpn.VPN(interface=interface)
+    def test_init(self):
+        with patch('signal.signal'), \
+             patch('fenrir.vpn.VPN.checkpassword') as checkpwd, \
+             patch('fenrir.fenrir.Firewall.disable') as fwdisable:
+            myvpn = vpn.VPN(inputinterface='eth0', vpninterface='tun0', dbpath='/tmp/test')
+            checkpwd.assert_called_once()
             myvpn.endnow = True
-        return mymock
-
-
-
+            myvpn.run()
+            assert 'eth0' in str(fwdisable.call_args_list[0])
+            assert 'tun0' in str(fwdisable.call_args_list[0])
 
 
 if __name__ == '__main__':

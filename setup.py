@@ -12,4 +12,8 @@ setup(
     zip_safe=False,
     install_requires=['cryptography', 'pyroute2', 'python_iptables', 'requests', 'scapy'],
     entry_points={'console_scripts': ['fenrir = fenrir.fenrir:main', ]},
+    project_urls={
+        'Source': 'https://github.com/HannesHofer/fenrir',
+        'Tracker': 'https://github.com/HannesHofer/fenrir/issues'
+    }
 )

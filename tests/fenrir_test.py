@@ -12,10 +12,11 @@ class FenrirTestCase(TestCase):
 
     def setup(self):
         with patch('fenrir.fenrir.makedirs') as mkdirmock, \
-             patch('fenrir.fenrir.Firewall'), \
+             patch('fenrir.fenrir.Firewall.forwarding') as forwardingmock, \
              patch('fenrir.fenrir.Process') as processmock:
             self.fenrir.setUP()
             mkdirmock.assert_called_once()
+            forwardingmock.assert_called_once()
             assert processmock.call_count == 3
             assert len(self.fenrir.processes) == 3
 

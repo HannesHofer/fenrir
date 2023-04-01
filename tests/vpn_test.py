@@ -9,14 +9,14 @@ class VPNTest(TestCase):
 
     def test_init(self):
         with patch('signal.signal'), \
+             patch('fenrir.vpn.VPN.checkpassword') as checkpwd, \
              patch('fenrir.fenrir.Firewall.disable') as fwdisable:
-
-            myvpn = vpn.VPN(inputinterface='eth0', vpninterface='tun0')
+            myvpn = vpn.VPN(inputinterface='eth0', vpninterface='tun0', dbpath='/tmp/test')
+            checkpwd.assert_called_once()
             myvpn.endnow = True
             myvpn.run()
             assert 'eth0' in str(fwdisable.call_args_list[0])
             assert 'tun0' in str(fwdisable.call_args_list[0])
-
 
 
 if __name__ == '__main__':

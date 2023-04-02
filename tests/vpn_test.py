@@ -1,6 +1,6 @@
 from unittest import TestCase, main as unittestmain
 from unittest.mock import patch, Mock
-from fenrir import vpn
+from fenrircore import vpn
 
 
 class VPNTest(TestCase):
@@ -9,8 +9,8 @@ class VPNTest(TestCase):
 
     def test_init(self):
         with patch('signal.signal'), \
-             patch('fenrir.vpn.VPN.checkpassword') as checkpwd, \
-             patch('fenrir.fenrir.Firewall.disable') as fwdisable:
+             patch('fenrircore.vpn.VPN.checkpassword') as checkpwd, \
+             patch('fenrircore.fenrir.Firewall.disable') as fwdisable:
             myvpn = vpn.VPN(inputinterface='eth0', vpninterface='tun0', dbpath='/tmp/test')
             checkpwd.assert_called_once()
             myvpn.endnow = True

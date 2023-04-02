@@ -1,6 +1,6 @@
 from unittest import TestCase, main as unittestmain
 from unittest.mock import patch
-from fenrir import fenrir, __version__
+from fenrircore import fenrir, __version__
 
 
 class FenrirTestCase(TestCase):
@@ -8,12 +8,12 @@ class FenrirTestCase(TestCase):
         self.fenrir = fenrir.Fenrir(inputinterface='eth0', vpninterface='tun0', dbpath='/tmp/fenrir.db', password=None)
 
     def test_version(self):
-        assert __version__ == '0.3.0'
+        assert __version__ == '0.4.0'
 
     def setup(self):
-        with patch('fenrir.fenrir.makedirs') as mkdirmock, \
-             patch('fenrir.fenrir.Firewall.forwarding') as forwardingmock, \
-             patch('fenrir.fenrir.Process') as processmock:
+        with patch('fenrircore.fenrir.makedirs') as mkdirmock, \
+             patch('fenrircore.fenrir.Firewall.forwarding') as forwardingmock, \
+             patch('fenrircore.fenrir.Process') as processmock:
             self.fenrir.setUP()
             mkdirmock.assert_called_once()
             forwardingmock.assert_called_once()
@@ -21,7 +21,7 @@ class FenrirTestCase(TestCase):
             assert len(self.fenrir.processes) == 3
 
     def teardown(self):
-        with patch('fenrir.fenrir.kill') as killmock:
+        with patch('fenrircore.fenrir.kill') as killmock:
             for process in self.fenrir.processes:
                 process.is_alive.return_value = False
             self.fenrir.tearDOWN()

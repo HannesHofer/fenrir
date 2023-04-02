@@ -2,7 +2,7 @@ from unittest import TestCase, main as unittestmain
 from unittest.mock import patch, mock_open, call
 from random import choice
 from string import ascii_letters
-from fenrir import filehandler
+from fenrircore import filehandler
 
 
 class FilehandlerTestCase(TestCase):

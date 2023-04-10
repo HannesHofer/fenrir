@@ -4,6 +4,7 @@ from . firewall import Firewall
 from . arper import arper
 from . scanner import scan, printresults
 from . vpn import vpn
+from . getmacvendors import updatemacvendors
 from signal import signal, SIGINT, SIGTERM
 from time import sleep
 from os import kill, makedirs, path
@@ -144,11 +145,15 @@ def main() -> None:
     parser.add_argument('--debug', help='activate debug logging', action='store_true')
     parser.add_argument('--scanonly', help='do network scan and print results', action='store_true')
     parser.add_argument('--password', help='use given password for vpnconfig encryption/decryption', default=None)
+    parser.add_argument('--updatemacvendors', const='/var/cache/fenrir/macvendors.sqlite',
+                        help='update macvendors and store to given path', default=None, nargs='?')
     args = parser.parse_args()
     loglevel = DEBUG if args.debug else INFO
     basicConfig(stream=stdout, level=loglevel)
     if args.scanonly:
         return printresults(args.inputinterface)
+    elif args.updatemacvendors:
+        return updatemacvendors(dbpath=args.updatemacvendors)
     Fenrir(inputinterface=args.inputinterface, vpninterface=args.vpninterface,
            dbpath=args.dbpath, password=args.password).run()
 

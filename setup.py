@@ -13,7 +13,7 @@ This is done via ARP Spoofing. Determined default GW on inputinterface is spoofe
     packages=['fenrircore'],
     include_package_data=True,
     zip_safe=False,
-    install_requires=['cryptography', 'pyroute2', 'python_iptables', 'requests', 'scapy'],
+    install_requires=['pycryptodomex', 'pyroute2', 'python_iptables', 'requests', 'scapy'],
     entry_points={'console_scripts': ['fenrir = fenrircore.fenrir:main', ]},
     project_urls={
         'Source': 'https://github.com/HannesHofer/fenrir',

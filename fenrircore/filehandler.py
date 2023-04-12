@@ -1,11 +1,16 @@
-#!/bin/env python3
+#!/bin/env python3.10
 
 import base64
 import hashlib
 from argparse import ArgumentParser
-from cryptography import fernet
+from Cryptodome.Protocol.KDF import PBKDF2
+from Cryptodome.Random import get_random_bytes
+from Cryptodome.Cipher import AES
+from io import BytesIO
 from os import fdopen
 from tempfile import mkstemp
+
+BLOCK_SIZE = 16
 
 
 class filehandler():
@@ -26,24 +31,38 @@ class filehandler():
         passphrase.strip()
         hlib = hashlib.md5()
         hlib.update(passphrase.encode('utf-8'))
-        self.__passphrase__ = base64.urlsafe_b64encode(
-            hlib.hexdigest().encode('utf-8'))
+        self.password = base64.urlsafe_b64encode(hlib.hexdigest().encode('utf-8'))
+        self.salt = get_random_bytes(BLOCK_SIZE)
+        self.__passphrase__ = PBKDF2(self.password, self.salt, dkLen=32)
 
     def encode(self, plaintext) -> bytes:
         """ encode/ encrypt given plaintext
 
         :param plaintext: plaintext to be encoded with pre-set passphrase
         """
-        f = fernet.Fernet(self.__passphrase__)
-        return f.encrypt(plaintext.encode('utf-8'))
+        cipher = AES.new(self.__passphrase__, AES.MODE_EAX)
+        buffer = BytesIO()
+        buffer.write(self.salt)
+        if isinstance(plaintext, str):
+            plaintext = plaintext.encode('utf-8')
+        ciphertext, tag = cipher.encrypt_and_digest(plaintext)
+        [buffer.write(x) for x in (cipher.nonce, tag, ciphertext)]
+        return buffer.getvalue()
 
-    def decode(self, ciphertext) -> bytes:
+    def decode(self, cipherbuffertext) -> bytes:
         """ decode/ decrypt given ciphertext
 
         :param ciphertext: ciphertext to be decoded with pre-set passphrase
         """
-        f = fernet.Fernet(self.__passphrase__)
-        return f.decrypt(ciphertext.encode('utf-8'))
+        if isinstance(cipherbuffertext, str):
+            buffer = BytesIO(cipherbuffertext.encode('utf-8'))
+        else:
+            buffer = BytesIO(cipherbuffertext)
+        salt = buffer.read(BLOCK_SIZE)
+        key = PBKDF2(self.password, salt, dkLen=32)
+        cipher = AES.new(key, AES.MODE_EAX, nonce=buffer.read(BLOCK_SIZE))
+        tag = buffer.read(BLOCK_SIZE)
+        return cipher.decrypt_and_verify(buffer.read(), tag).decode('utf-8')
 
     def checkpassword(self, ciphertext) -> bool:
         """ check if currently set password is correct
@@ -51,8 +70,8 @@ class filehandler():
         :param ciphertext: test cipher to decrypt with given password
         """
         try:
-            self.decode(ciphertext.decode('utf-8'))
-        except fernet.InvalidToken:
+            self.decode(ciphertext)
+        except ValueError:
             return False
         return True
 
@@ -65,7 +84,7 @@ class filehandler():
         """
         fd, authpath = mkstemp()
         with fdopen(fd, 'w') as fp:
-            fp.write(self.decode(ciphertext).decode('utf-8'))
+            fp.write(self.decode(ciphertext))
         return authpath
 
     def decryptfile(self, inputfile) -> str:
@@ -120,7 +139,7 @@ def crypt(sourcefile, destinationfile, isencrypt, passphrase=None, interface=Non
         desitnationtext = fenc.decode(sourcetext)
 
     with open(destinationfile, 'w') as f:
-        f.write(desitnationtext.decode('utf-8'))
+        f.write(desitnationtext)
 
 
 def encrypt(sourcefile, destinationfile, passphrase=None, interface=None) -> None:

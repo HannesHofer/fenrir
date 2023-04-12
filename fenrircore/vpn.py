@@ -30,8 +30,8 @@ class VPN:
         :param dbpath: path to vpn settings database
         :param password: password for encryption
         """
-        self.inputinterface = inputinterface
-        self.vpninterface = vpninterface
+        self.inputinterface = inputinterface if inputinterface else 'eth0'
+        self.vpninterface = vpninterface if vpninterface else 'tun0'
         self.dbpath = dbpath
         self.pipepath = str(join(dirname(self.dbpath), 'fenrirvpn.pipe'))
         self.endnow = False
@@ -143,13 +143,13 @@ class VPN:
                 # create common auth file for username and password
                 encuser = self.connectionprofiles[profilename]['username']
                 encpass = self.connectionprofiles[profilename]['password']
-                authfile = fh.decrypttofile(encuser.decode('utf-8'))
-                tmppass = fh.decrypttofile(encpass.decode('utf-8'))
+                authfile = fh.decrypttofile(encuser)
+                tmppass = fh.decrypttofile(encpass)
                 with open(authfile, 'a') as writefile:
                     with open(tmppass, 'r') as readfile:
                         writefile.write('\n' + readfile.read())
                 unlink(tmppass)
-                config = fh.decrypttofile(self.connectionprofiles[profilename]['config'].decode('utf-8'))
+                config = fh.decrypttofile(self.connectionprofiles[profilename]['config'])
                 interface = self.vpninterface
                 if not self.connectionprofiles[profilename]['isdefault']:
                     interface = 'tun' + md5(profilename.encode('utf-8')).hexdigest()[:3]

@@ -9,7 +9,7 @@ from socket import AF_INET
 from datetime import datetime
 from time import time, sleep
 from sqlite3 import connect, OperationalError, Cursor
-from logging import info, debug, basicConfig, INFO, DEBUG
+from logging import info, debug, basicConfig, getLogger, INFO, DEBUG
 from sys import stdout
 from argparse import ArgumentParser
 from signal import signal, SIGINT, SIGTERM
@@ -163,6 +163,7 @@ class Scanner:
         start scanning with given parameters
         """
         basicConfig(stream=stdout, level=DEBUG if debuglog else INFO)
+        getLogger('pyroute2').propagate = False
         signal(SIGINT, self.doend)
         signal(SIGTERM, self.doend)
         info('statring device scanning...')
@@ -201,12 +202,10 @@ def main() -> None:
     start Firewall
     """
     parser = ArgumentParser()
-    parser.add_argument(
-        '--singleshot', help='exit after first completed scan', action='store_true')
-    parser.add_argument(
-        '--print', help='print found devices int network (implies --singleshot)', action='store_true')
-    parser.add_argument(
-        '--interface', help='interface for device scanning', default='eth0')
+    parser.add_argument('--singleshot', help='exit after first completed scan', action='store_true')
+    parser.add_argument('--print', help='print found devices int network (implies --singleshot)', action='store_true')
+    parser.add_argument('--interface', help='interface for device scanning', default='eth0')
+    parser.add_argument('--interface', help='interface for device scanning', default='eth0')
     parser.add_argument('--debug', help='activate debug logging', action='store_true')
     args = parser.parse_args()
     if args.print:

@@ -8,7 +8,7 @@ class FenrirTestCase(TestCase):
         self.fenrir = fenrir.Fenrir(inputinterface='eth0', vpninterface='tun0', dbpath='/tmp/fenrir.db', password=None)
 
     def test_version(self):
-        assert __version__ == '0.6.0'
+        assert __version__ == '0.7.0'
 
     def setup(self):
         with patch('fenrircore.fenrir.makedirs') as mkdirmock, \
